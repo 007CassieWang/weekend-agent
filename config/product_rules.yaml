@@ -1,0 +1,1050 @@
+# 周末/闲时活动规划 Agent - 泛化版产品规则配置
+# 目标：不要把 Agent 固定成“老婆+孩子+减脂”的家庭场景，而是先识别场景，再动态启用约束和评分权重。
+# 产品经理优先修改本文件；如 scoring.py/agent_harness.py 已写死 child_friendly/diet_friendly，需要同步改成读取 scoring_profiles 与 activated_constraints。
+
+# ==================== 产品定位 ====================
+product_profile:
+  product_name: "闲时活动规划 Agent"
+  target_user: "临时产生空闲时间、希望快速安排本地活动的用户"
+  default_scenario: "本地短时活动规划"
+  product_positioning: "根据用户的时间、地点、同行人、预算、偏好和特殊约束，生成可执行的本地活动方案，并支持 Mock 预约、下单和消息发送。"
+  design_principle:
+    - "用户画像不预设家庭结构，先识别场景，再启用对应规则"
+    - "儿童、老人、宠物、减脂、无障碍等都属于可选约束，不作为全局默认"
+    - "硬约束优先过滤，软偏好用于评分排序"
+    - "缺失信息优先使用中性默认值，避免强行补成家庭/亲子场景"
+
+# ==================== 默认值配置：全部保持中性 ====================
+defaults:
+  start_time: "14:00"
+  duration_hours: 4
+  max_drive_minutes: 30
+  budget_level: "medium"
+  default_location: "mock_home_location"
+  default_transportation: "driving"
+  default_execution_mode: "plan_then_confirm"
+
+  # 不要默认有孩子、老婆、家庭；缺失时保持 unknown/null
+  people_count: null
+  companions: "unknown"
+  child_age: null
+  elder_age: null
+  pet: false
+  diet_goal: "none"
+  accessibility_need: false
+  activity_intensity: "medium"
+  indoor_preference: "no_preference"
+
+  budget_levels:
+    low:
+      label: "经济型"
+      price_per_person_range: [0, 100]
+    medium:
+      label: "中等消费"
+      price_per_person_range: [100, 300]
+    high:
+      label: "高端消费"
+      price_per_person_range: [300, 1000]
+
+# ==================== 槽位分类 ====================
+slot_schema:
+  # 核心槽位：大多数场景都需要
+  core_slots:
+    - time_window
+    - start_time
+    - duration_hours
+    - location
+    - people_count
+    - companions
+    - max_drive_minutes
+    - budget_level
+    - activity_preference
+    - food_preference
+    - execution_intent
+
+  # 可选约束：只有用户明确提到或场景识别命中时才启用
+  optional_constraint_slots:
+    - child_age
+    - elder_age
+    - pet
+    - diet_goal
+    - allergy
+    - accessibility_need
+    - weather_sensitivity
+    - indoor_preference
+    - activity_intensity
+    - noise_preference
+    - parking_need
+    - alcohol_avoidance
+    - photo_spot_preference
+
+  # 追问优先级：只追问会显著影响可执行性的槽位
+  clarification_priority:
+    high:
+      - location
+      - date_or_time_window
+      - people_count
+    medium:
+      - budget_level
+      - max_drive_minutes
+      - activity_preference
+    low:
+      - exact_restaurant_type
+      - exact_activity_type
+      - gift_preference
+
+# ==================== 场景识别：multi-label 输出，旧 scenario_type 仅作兼容 ====================
+scenario_detection:
+  default_scenario_type: "general_leisure"
+  confidence_threshold: 0.55
+  mode: "multi_label"
+  output_schema:
+    companion_context:
+      allowed_values: ["solo", "couple", "family_with_children", "family_with_elderly", "friends", "colleagues", "pet", "unknown"]
+      multiple: true
+      default: ["unknown"]
+      note: "老婆孩子应识别为 family_with_children，并在 relation_context 标注 spouse，不能退化为单纯 couple。"
+    relation_context:
+      allowed_values: ["spouse", "partner", "parent", "child", "friend", "coworker"]
+      multiple: true
+      default: []
+    primary_intent:
+      allowed_values: ["meal", "cafe_tea", "culture_experience", "indoor_entertainment", "outdoor_walk", "shopping_mall", "wellness_relax", "nightlife", "parent_child", "short_trip", "time_killing", "mixed_plan"]
+      multiple: false
+      default: "mixed_plan"
+    context_modifiers:
+      allowed_values: ["rainy_day", "hot_weather", "cold_weather", "low_budget", "high_budget", "low_energy", "high_energy", "quiet", "lively", "photo_spot", "no_reservation", "parking_needed", "near_subway", "low_walking", "queue_sensitive"]
+      multiple: true
+      default: []
+    hard_constraints:
+      allowed_values: ["child_safety", "elder_mobility", "pet_allowed", "allergy_safe", "accessibility", "max_distance", "budget_cap", "time_window"]
+      multiple: true
+      default: []
+    soft_preferences:
+      allowed_values: ["atmosphere", "uniqueness", "social_interaction", "service_quality", "food_quality", "place_quality", "coupon_or_discount", "route_smoothness"]
+      multiple: true
+      default: []
+
+  multi_label_rules:
+    companion_context:
+      solo:
+        keywords: ["一个人", "自己", "独处", "单独", "独自"]
+      couple:
+        keywords: ["情侣", "约会", "女朋友", "男朋友", "对象", "二人世界"]
+        exclude_if_any_context: ["family_with_children"]
+      family_with_children:
+        keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿", "幼儿园", "老婆孩子", "一家三口"]
+      family_with_elderly:
+        keywords: ["父母", "爸妈", "老人", "长辈", "爷爷", "奶奶", "外公", "外婆"]
+      friends:
+        keywords: ["朋友", "好友", "哥们", "闺蜜", "兄弟", "同学", "搭子"]
+      colleagues:
+        keywords: ["同事", "团队", "部门", "客户"]
+      pet:
+        keywords: ["宠物", "带狗", "带猫", "遛狗", "猫咪", "狗狗", "可带宠", "宠物友好"]
+        enabled_when_slot_true: "pet"
+    primary_intent:
+      meal:
+        keywords: ["吃饭", "吃个", "想吃", "晚饭", "餐厅", "美食", "火锅", "烧烤", "日料", "西餐", "夜宵", "粤菜", "本帮菜"]
+      cafe_tea:
+        keywords: ["咖啡", "茶馆", "奶茶", "下午茶", "甜品"]
+      culture_experience:
+        keywords: ["展览", "看展", "博物馆", "美术馆", "艺术", "演出", "音乐剧", "Livehouse", "市集", "手作"]
+      indoor_entertainment:
+        keywords: ["电影院", "电影", "KTV", "剧本杀", "密室", "桌游", "台球", "保龄球", "电玩城"]
+      outdoor_walk:
+        keywords: ["公园", "城市漫步", "citywalk", "散步", "走走", "骑行", "徒步", "露营", "滨水"]
+      shopping_mall:
+        keywords: ["商场", "购物中心", "奥莱", "商业街", "步行街", "逛街"]
+      wellness_relax:
+        keywords: ["SPA", "按摩", "洗浴", "温泉", "瑜伽", "疗愈", "书店", "放松"]
+      nightlife:
+        keywords: ["夜生活", "酒吧", "夜店", "深夜", "晚上嗨"]
+      parent_child:
+        keywords: ["亲子", "儿童乐园", "儿童剧", "带娃", "孩子玩", "科技馆"]
+      short_trip:
+        keywords: ["周边游", "短途", "郊区", "一日游", "半日游"]
+      time_killing:
+        keywords: ["打发时间", "消磨时间", "待一会", "待两小时", "杀时间"]
+    context_modifiers:
+      rainy_day: ["下雨", "雨天", "阴雨"]
+      hot_weather: ["太热", "高温", "热天", "暴晒"]
+      cold_weather: ["太冷", "降温", "冷天"]
+      low_budget: ["便宜", "省钱", "低预算", "预算不高", "实惠", "人均100", "100以内", "别太贵", "别太高", "不用太贵"]
+      high_budget: ["高端", "预算充足", "精致", "仪式感"]
+      low_energy: ["别太累", "不要太累", "不想太累", "低体力", "轻松", "少走路", "懒得动"]
+      high_energy: ["运动", "爬山", "徒步", "骑行", "出汗"]
+      quiet: ["安静", "清静", "人少", "不吵"]
+      lively: ["热闹", "气氛好", "嗨", "好玩"]
+      photo_spot: ["拍照", "出片", "打卡", "好看"]
+      no_reservation: ["不想预约", "不用预约", "免预约", "说走就走"]
+      parking_needed: ["开车", "停车", "好停车", "自驾"]
+      near_subway: ["地铁", "近地铁", "地铁口"]
+      low_walking: ["少走路", "不想走", "走不动", "低步行"]
+      queue_sensitive: ["不想排队", "少排队", "别排队", "等位少"]
+    hard_constraints:
+      child_safety:
+        trigger_keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿"]
+        enabled_when_context_contains: "family_with_children"
+        ask_optional_if_missing: "child_age"
+      elder_mobility:
+        trigger_keywords: ["父母", "爸妈", "老人", "长辈", "爷爷", "奶奶", "外公", "外婆"]
+        enabled_when_context_contains: "family_with_elderly"
+        note: "老人场景提升少步行、可停车/可落客、低噪声权重；不默认强制无障碍。"
+      pet_allowed:
+        trigger_keywords: ["宠物", "带狗", "带猫", "遛狗", "猫咪", "狗狗"]
+        enabled_when_slot_true: "pet"
+      allergy_safe:
+        trigger_keywords: ["过敏"]
+        enabled_when_slot_non_empty: "allergy"
+      accessibility:
+        trigger_keywords: ["无障碍", "轮椅", "行动不便", "拐杖"]
+        enabled_when_slot_true: "accessibility_need"
+      max_distance:
+        trigger_keywords: ["别太远", "不远", "附近", "离家近", "30分钟内", "半小时内"]
+      budget_cap:
+        trigger_keywords: ["预算不超过", "不能超过", "封顶", "人均100", "100以内", "数字以内"]
+      time_window:
+        trigger_keywords: ["两小时", "2小时", "半天", "下午", "晚上", "今晚", "周日", "周六", "周末"]
+
+  scenarios:
+    general_leisure:
+      label: "通用休闲"
+      keywords: ["出去玩", "安排一下", "闲着", "有空", "周末", "下午", "晚上"]
+      activated_constraints: []
+      scoring_profile: "general"
+
+    family_with_children:
+      label: "亲子/家庭"
+      keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童", "幼儿园", "老婆孩子", "一家人"]
+      activated_constraints: ["child_safety", "family_friendly"]
+      scoring_profile: "family_with_children"
+
+    couple_date:
+      label: "情侣约会"
+      keywords: ["约会", "女朋友", "男朋友", "对象", "老婆", "老公", "纪念日", "浪漫"]
+      activated_constraints: ["date_atmosphere", "privacy_comfort"]
+      scoring_profile: "couple_date"
+
+    friends_social:
+      label: "朋友聚会"
+      keywords: ["朋友", "同学", "同事", "聚会", "一起玩", "多人", "局"]
+      activated_constraints: ["group_capacity", "social_interaction"]
+      scoring_profile: "friends_social"
+
+    solo_relax:
+      label: "独处放松"
+      keywords: ["一个人", "自己", "独处", "放松", "安静", "散心"]
+      activated_constraints: ["quiet_comfort", "low_decision_cost"]
+      scoring_profile: "solo_relax"
+
+    elderly_friendly:
+      label: "老人友好"
+      keywords: ["父母", "老人", "爸妈", "长辈", "爷爷", "奶奶", "外公", "外婆"]
+      activated_constraints: ["low_physical_load", "accessibility"]
+      scoring_profile: "elderly_friendly"
+
+    pet_friendly:
+      label: "宠物友好"
+      keywords: ["宠物", "狗", "猫", "带狗", "带猫", "遛狗"]
+      activated_constraints: ["pet_friendly"]
+      scoring_profile: "pet_friendly"
+
+    health_diet:
+      label: "健康/减脂"
+      keywords: ["减肥", "减脂", "低卡", "低碳", "健康餐", "清淡", "控糖", "素食"]
+      activated_constraints: ["diet_match"]
+      scoring_profile: "health_diet"
+
+    active_outdoor:
+      label: "户外运动"
+      keywords: ["运动", "徒步", "骑行", "爬山", "露营", "跑步", "户外"]
+      activated_constraints: ["weather_check", "physical_load_match"]
+      scoring_profile: "active_outdoor"
+
+    culture_experience:
+      label: "文化体验"
+      keywords: ["展览", "博物馆", "艺术", "演出", "音乐剧", "市集", "手作"]
+      activated_constraints: ["interest_match"]
+      scoring_profile: "culture_experience"
+
+# ==================== 硬约束与软偏好 ====================
+constraint_rules:
+  # 硬约束：不满足时优先过滤或强烈降权
+  hard_constraints:
+    max_drive_minutes:
+      enabled_by_default: true
+      fallback: "缩小搜索半径，优先推荐近距离商圈或综合体"
+    reservation_required:
+      enabled_by_default: false
+      fallback: "改为无需预约或可现场进入的活动"
+    child_safety:
+      enabled_when_context_contains: "family_with_children"
+      trigger_keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童"]
+      ask_optional_if_missing: "child_age"
+      fallback: "剔除不适合儿童的活动或餐厅"
+    accessibility:
+      enabled_when_slot_true: "accessibility_need"
+      trigger_keywords: ["无障碍", "轮椅", "行动不便", "拐杖"]
+      fallback: "优先选择无障碍、少步行、可停车的地点"
+    pet_friendly:
+      enabled_when_slot_true: "pet"
+      fallback: "只保留明确允许宠物进入的场所"
+    allergy:
+      enabled_when_slot_non_empty: "allergy"
+      fallback: "剔除含过敏原风险的餐厅"
+    elder_mobility:
+      enabled_when_context_contains: "family_with_elderly"
+      fallback: "优先少步行、低噪声、可停车/可落客地点；仅在明确无障碍需求时强制 accessibility"
+
+  # 软偏好：不直接过滤，用于评分排序
+  soft_preferences:
+    budget_level:
+      description: "价格与用户预算等级的匹配程度"
+    activity_preference:
+      description: "活动类型与用户兴趣偏好的匹配程度"
+    food_preference:
+      description: "餐厅类型与用户口味偏好的匹配程度"
+    atmosphere:
+      description: "热闹、安静、浪漫、亲子、社交等氛围匹配"
+    intensity:
+      description: "运动强度与同行人身体状态匹配"
+
+# ==================== multi-label 动态评分策略 ====================
+scoring_strategy:
+  note: "优先使用多标签合成评分权重；旧 scoring_profiles/scoring_weights 作为 demo fallback。"
+  base_weights:
+    time_fit: 16
+    distance_fit: 16
+    preference_match: 14
+    budget_fit: 12
+    route_smoothness: 10
+    availability_risk: 14
+    place_quality: 10
+    group_fit: 8
+  label_adjustments:
+    companion_context:
+      solo:
+        quiet_comfort: 14
+        low_decision_cost: 8
+        group_fit: -6
+      couple:
+        atmosphere_match: 14
+        uniqueness: 8
+        privacy_comfort: 6
+      family_with_children:
+        child_friendly: 24
+        family_comfort: 12
+        availability_risk: 6
+      family_with_elderly:
+        low_physical_load: 18
+        route_smoothness: 10
+        parking_fit: 8
+        atmosphere_match: 6
+      friends:
+        social_interaction: 16
+        group_fit: 12
+        budget_fit: 4
+      colleagues:
+        service_quality: 10
+        group_fit: 10
+        route_smoothness: 6
+      pet:
+        pet_friendly: 26
+        outdoor_or_open_space: 8
+    primary_intent:
+      meal:
+        food_match: 18
+        food_quality: 12
+        place_quality: 4
+      cafe_tea:
+        atmosphere_match: 14
+        quiet_comfort: 8
+      culture_experience:
+        interest_match: 18
+        uniqueness: 10
+      indoor_entertainment:
+        availability_risk: 8
+        social_interaction: 8
+      outdoor_walk:
+        weather_fit: 12
+        scenery_or_experience: 10
+      shopping_mall:
+        route_smoothness: 10
+        availability_risk: 8
+      wellness_relax:
+        low_physical_load: 10
+        quiet_comfort: 10
+      nightlife:
+        atmosphere_match: 12
+        availability_risk: 8
+      parent_child:
+        child_friendly: 24
+        family_comfort: 10
+      short_trip:
+        distance_fit: 10
+        route_smoothness: 10
+      time_killing:
+        distance_fit: 10
+        low_decision_cost: 12
+      mixed_plan:
+        route_smoothness: 10
+        preference_match: 8
+    context_modifiers:
+      rainy_day:
+        weather_fit: 16
+        availability_risk: 4
+      low_budget:
+        budget_fit: 16
+        coupon_or_discount: 8
+      high_budget:
+        place_quality: 10
+        service_quality: 8
+      low_energy:
+        low_physical_load: 16
+        route_smoothness: 8
+      high_energy:
+        activity_intensity_match: 14
+      quiet:
+        quiet_comfort: 14
+      lively:
+        atmosphere_match: 10
+        social_interaction: 8
+      photo_spot:
+        scenery_or_experience: 12
+        uniqueness: 6
+      no_reservation:
+        reservation_fit: 14
+        availability_risk: 8
+      parking_needed:
+        parking_fit: 14
+      near_subway:
+        subway_fit: 14
+      low_walking:
+        low_physical_load: 18
+        route_smoothness: 8
+      queue_sensitive:
+        queue_fit: 16
+        availability_risk: 8
+    hard_constraints:
+      child_safety:
+        child_friendly: 28
+      elder_mobility:
+        low_physical_load: 22
+        parking_fit: 8
+      pet_allowed:
+        pet_friendly: 30
+      allergy_safe:
+        food_quality: 10
+      accessibility:
+        accessibility: 24
+      max_distance:
+        distance_fit: 18
+      budget_cap:
+        budget_fit: 22
+      time_window:
+        time_fit: 18
+
+# ==================== 旧版动态评分模板 ====================
+# 每个场景使用不同权重；权重之和建议为 100。
+# 关键变化：child_friendly 和 diet_friendly 不再是全局固定项，只在对应场景中出现。
+scoring_profiles:
+  general:
+    time_fit: 20
+    distance_fit: 20
+    preference_match: 20
+    budget_fit: 15
+    group_fit: 10
+    availability_risk: 15
+
+  family_with_children:
+    time_fit: 15
+    distance_fit: 15
+    child_friendly: 25
+    family_comfort: 15
+    budget_fit: 10
+    availability_risk: 10
+    food_match: 10
+
+  couple_date:
+    time_fit: 15
+    distance_fit: 15
+    atmosphere_match: 25
+    food_match: 15
+    uniqueness: 15
+    availability_risk: 15
+
+  friends_social:
+    time_fit: 15
+    distance_fit: 15
+    group_fit: 25
+    social_interaction: 20
+    budget_fit: 10
+    availability_risk: 15
+
+  solo_relax:
+    time_fit: 20
+    distance_fit: 20
+    quiet_comfort: 25
+    low_decision_cost: 15
+    budget_fit: 10
+    availability_risk: 10
+
+  elderly_friendly:
+    time_fit: 15
+    distance_fit: 20
+    low_physical_load: 25
+    accessibility: 20
+    food_match: 10
+    availability_risk: 10
+
+  pet_friendly:
+    time_fit: 15
+    distance_fit: 20
+    pet_friendly: 30
+    outdoor_or_open_space: 15
+    availability_risk: 10
+    budget_fit: 10
+
+  health_diet:
+    time_fit: 15
+    distance_fit: 15
+    diet_friendly: 30
+    food_quality: 15
+    activity_intensity_match: 10
+    availability_risk: 15
+
+  active_outdoor:
+    time_fit: 15
+    distance_fit: 15
+    weather_fit: 20
+    activity_intensity_match: 20
+    scenery_or_experience: 15
+    availability_risk: 15
+
+  culture_experience:
+    time_fit: 20
+    distance_fit: 15
+    interest_match: 25
+    uniqueness: 15
+    budget_fit: 10
+    availability_risk: 15
+
+# 兼容旧代码：如果 scoring.py 暂时只读取 scoring_weights，就用这个通用权重，避免固定成亲子/减脂。
+scoring_weights:
+  time_fit: 20
+  distance_fit: 20
+  preference_match: 20
+  budget_fit: 15
+  group_fit: 10
+  availability_risk: 15
+
+# 旧字段兼容说明：建议尽快让代码改读 scoring_profiles。
+legacy_field_mapping:
+  child_friendly: "仅在 family_with_children 场景启用"
+  diet_friendly: "仅在 health_diet 或用户明确提到减脂/清淡/控糖时启用"
+  group_fit: "在朋友聚会、多人同行、家庭场景启用"
+  booking_risk: "统一改名为 availability_risk"
+
+# ==================== 追问规则 ====================
+clarification_rules:
+  ask_if_missing:
+    - location
+    - date_or_time_window
+    - people_count
+
+  # 以下信息缺失时用默认或中性值，不要强行补成亲子/减脂场景
+  do_not_ask_if_missing:
+    - child_age
+    - diet_goal
+    - exact_start_time
+    - restaurant_type
+    - exact_activity_type
+    - companion_identity
+
+  default_when_missing:
+    exact_start_time: "14:00"
+    duration_hours: 4
+    budget_level: "medium"
+    max_drive_minutes: 30
+    companions: "unknown"
+    child_age: null
+    diet_goal: "none"
+
+  # 仅当用户表达模糊且会影响方案质量时追问
+  conditional_questions:
+    missing_people_count: "这次大概几个人一起？"
+    missing_location: "你希望从哪里出发，或者我先按默认位置规划？"
+    ambiguous_activity_preference: "你更想偏室内放松、户外走走，还是吃饭聊天？"
+
+# ==================== 执行级别配置 ====================
+execution_level:
+  available_modes:
+    - only_recommend
+    - plan_then_confirm
+    - mock_execute
+  default_mode: "mock_execute"
+  require_user_confirmation_before_booking: true
+  allow_mock_booking: true
+  allow_mock_order: true
+  allow_mock_send_message: true
+  real_booking_allowed: false
+  real_order_allowed: false
+  real_payment_allowed: false
+  real_message_allowed: false
+
+# ==================== 异常兜底策略：按约束类型兜底，不按单一画像兜底 ====================
+failure_fallbacks:
+  unavailable: "选择同区域、同预算、同类型且可预约的备选项"
+  route_too_far: "缩小搜索半径，优先推荐 30 分钟车程内的活动和餐厅"
+  time_conflict: "压缩非核心环节或减少一个活动点，保证时间线可执行"
+  over_budget: "替换为同类型但人均价格更低的选项"
+  poor_weather: "优先替换为室内活动或商场综合体方案"
+  group_capacity_insufficient: "替换为适合当前人数的活动或餐厅"
+  child_unfriendly: "仅当儿童约束被激活时，替换为儿童友好方案"
+  diet_unfriendly: "仅当健康饮食约束被激活时，替换为更清淡、低卡或健康餐选项"
+  accessibility_unfriendly: "仅当无障碍约束被激活时，替换为少步行、可停车、无障碍地点"
+  ultimate_fallback: "推荐近距离商场综合体方案，组合餐饮、休闲、购物或轻娱乐，降低路线和预约风险"
+
+# ==================== 中国本地生活 POI 类目映射 ====================
+local_life_poi_taxonomy:
+  美食:
+    火锅:
+      companion_context: ["friends", "couple", "colleagues"]
+      primary_intent: ["meal"]
+      context_modifiers: ["lively"]
+      risk_tags: ["排队", "噪声", "预约", "重口味"]
+    烧烤:
+      companion_context: ["friends", "colleagues"]
+      primary_intent: ["meal", "nightlife"]
+      context_modifiers: ["lively"]
+      risk_tags: ["排队", "噪声", "油烟", "夜间"]
+    日料:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["meal"]
+      context_modifiers: ["quiet", "high_budget"]
+      risk_tags: ["预约", "过敏原", "价格波动"]
+    西餐:
+      companion_context: ["couple", "friends", "colleagues"]
+      primary_intent: ["meal"]
+      context_modifiers: ["quiet", "photo_spot", "high_budget"]
+      risk_tags: ["预约", "价格波动"]
+    粤菜:
+      companion_context: ["family_with_elderly", "family_with_children", "colleagues"]
+      primary_intent: ["meal"]
+      context_modifiers: ["quiet", "low_energy"]
+      risk_tags: ["预约", "包间紧张"]
+    本帮菜:
+      companion_context: ["family_with_elderly", "friends", "colleagues"]
+      primary_intent: ["meal"]
+      context_modifiers: ["quiet"]
+      risk_tags: ["预约", "排队"]
+    小吃快餐:
+      companion_context: ["solo", "friends", "colleagues"]
+      primary_intent: ["meal", "time_killing"]
+      context_modifiers: ["low_budget", "no_reservation"]
+      risk_tags: ["排队", "噪声", "座位不稳定"]
+    茶餐厅:
+      companion_context: ["solo", "couple", "friends", "family_with_elderly"]
+      primary_intent: ["meal", "cafe_tea"]
+      context_modifiers: ["low_budget", "lively"]
+      risk_tags: ["排队", "噪声"]
+    甜品:
+      companion_context: ["solo", "couple", "friends", "family_with_children"]
+      primary_intent: ["cafe_tea", "meal"]
+      context_modifiers: ["photo_spot", "low_energy"]
+      risk_tags: ["排队", "糖分"]
+    夜宵:
+      companion_context: ["friends", "couple", "colleagues"]
+      primary_intent: ["meal", "nightlife"]
+      context_modifiers: ["lively"]
+      risk_tags: ["夜间", "噪声", "排队"]
+  咖啡茶饮:
+    咖啡:
+      companion_context: ["solo", "couple", "friends", "colleagues", "pet"]
+      primary_intent: ["cafe_tea", "time_killing"]
+      context_modifiers: ["quiet", "photo_spot", "near_subway"]
+      risk_tags: ["座位不稳定", "宠物限制"]
+    茶馆:
+      companion_context: ["solo", "couple", "family_with_elderly", "friends"]
+      primary_intent: ["cafe_tea", "wellness_relax"]
+      context_modifiers: ["quiet", "low_energy"]
+      risk_tags: ["预约", "低龄儿童耐心风险"]
+    奶茶:
+      companion_context: ["solo", "friends", "couple"]
+      primary_intent: ["cafe_tea", "time_killing"]
+      context_modifiers: ["low_budget", "no_reservation"]
+      risk_tags: ["排队", "座位少"]
+    甜品下午茶:
+      companion_context: ["couple", "friends", "family_with_children"]
+      primary_intent: ["cafe_tea"]
+      context_modifiers: ["photo_spot", "low_energy"]
+      risk_tags: ["预约", "排队", "价格波动"]
+  商场综合体:
+    购物中心:
+      companion_context: ["solo", "couple", "family_with_children", "family_with_elderly", "friends"]
+      primary_intent: ["shopping_mall", "mixed_plan", "time_killing"]
+      context_modifiers: ["rainy_day", "hot_weather", "cold_weather", "parking_needed", "near_subway", "low_walking"]
+      risk_tags: ["停车拥堵", "排队", "噪声"]
+    奥莱:
+      companion_context: ["couple", "family_with_elderly", "friends"]
+      primary_intent: ["shopping_mall", "short_trip"]
+      context_modifiers: ["parking_needed", "high_budget"]
+      risk_tags: ["步行量", "天气依赖", "停车拥堵"]
+    商业街:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["shopping_mall", "outdoor_walk"]
+      context_modifiers: ["photo_spot", "lively"]
+      risk_tags: ["天气依赖", "步行量", "排队"]
+    步行街:
+      companion_context: ["solo", "couple", "friends", "family_with_children"]
+      primary_intent: ["shopping_mall", "outdoor_walk"]
+      context_modifiers: ["lively", "photo_spot"]
+      risk_tags: ["步行量", "人流密集", "天气依赖"]
+  文化体验:
+    展览:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["culture_experience"]
+      context_modifiers: ["quiet", "photo_spot"]
+      risk_tags: ["预约", "排队", "儿童耐心风险"]
+    博物馆:
+      companion_context: ["solo", "couple", "family_with_children", "family_with_elderly"]
+      primary_intent: ["culture_experience", "parent_child"]
+      context_modifiers: ["rainy_day", "quiet", "low_budget"]
+      risk_tags: ["预约", "闭馆日", "步行量"]
+    美术馆:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["culture_experience"]
+      context_modifiers: ["quiet", "photo_spot"]
+      risk_tags: ["预约", "儿童耐心风险"]
+    演出:
+      companion_context: ["couple", "friends", "colleagues"]
+      primary_intent: ["culture_experience", "nightlife"]
+      context_modifiers: ["high_budget", "lively"]
+      risk_tags: ["预约", "退改限制", "噪声"]
+    音乐剧:
+      companion_context: ["couple", "friends"]
+      primary_intent: ["culture_experience", "nightlife"]
+      context_modifiers: ["high_budget"]
+      risk_tags: ["预约", "退改限制", "时段固定"]
+    Livehouse:
+      companion_context: ["friends", "couple"]
+      primary_intent: ["culture_experience", "nightlife"]
+      context_modifiers: ["lively"]
+      risk_tags: ["噪声", "夜间", "儿童风险", "预约"]
+    市集:
+      companion_context: ["solo", "couple", "friends", "pet"]
+      primary_intent: ["culture_experience", "outdoor_walk"]
+      context_modifiers: ["photo_spot", "lively"]
+      risk_tags: ["天气依赖", "排队", "宠物限制"]
+    手作:
+      companion_context: ["solo", "couple", "friends", "family_with_children"]
+      primary_intent: ["culture_experience", "parent_child"]
+      context_modifiers: ["rainy_day", "quiet"]
+      risk_tags: ["预约", "儿童年龄限制"]
+  室内娱乐:
+    电影院:
+      companion_context: ["solo", "couple", "friends", "family_with_elderly"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["rainy_day", "hot_weather", "cold_weather", "low_energy"]
+      risk_tags: ["时段固定", "儿童分级风险"]
+    KTV:
+      companion_context: ["friends", "colleagues"]
+      primary_intent: ["indoor_entertainment", "nightlife"]
+      context_modifiers: ["lively"]
+      risk_tags: ["噪声", "预约", "夜间"]
+    剧本杀:
+      companion_context: ["friends", "colleagues"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["lively"]
+      risk_tags: ["预约", "时长长", "儿童风险"]
+    密室:
+      companion_context: ["friends", "couple"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["high_energy"]
+      risk_tags: ["预约", "惊吓", "儿童风险"]
+    桌游:
+      companion_context: ["friends", "colleagues"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["rainy_day", "low_budget"]
+      risk_tags: ["预约", "噪声"]
+    台球:
+      companion_context: ["friends", "colleagues"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["low_budget", "lively"]
+      risk_tags: ["排队", "噪声"]
+    保龄球:
+      companion_context: ["friends", "family_with_children", "colleagues"]
+      primary_intent: ["indoor_entertainment"]
+      context_modifiers: ["lively"]
+      risk_tags: ["预约", "步行量", "儿童年龄限制"]
+    电玩城:
+      companion_context: ["friends", "family_with_children", "couple"]
+      primary_intent: ["indoor_entertainment", "time_killing"]
+      context_modifiers: ["lively", "rainy_day"]
+      risk_tags: ["噪声", "儿童沉迷风险", "排队"]
+  户外休闲:
+    公园:
+      companion_context: ["solo", "couple", "family_with_children", "family_with_elderly", "friends", "pet"]
+      primary_intent: ["outdoor_walk", "time_killing"]
+      context_modifiers: ["low_budget", "low_energy"]
+      risk_tags: ["天气依赖", "步行量", "宠物限制"]
+    城市漫步:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["outdoor_walk"]
+      context_modifiers: ["photo_spot", "low_budget"]
+      risk_tags: ["天气依赖", "步行量"]
+    骑行:
+      companion_context: ["solo", "friends", "couple"]
+      primary_intent: ["outdoor_walk"]
+      context_modifiers: ["high_energy"]
+      risk_tags: ["天气依赖", "安全风险", "体力要求"]
+    徒步:
+      companion_context: ["solo", "friends"]
+      primary_intent: ["outdoor_walk", "short_trip"]
+      context_modifiers: ["high_energy"]
+      risk_tags: ["天气依赖", "体力要求", "老人不友好"]
+    露营:
+      companion_context: ["couple", "friends", "family_with_children", "pet"]
+      primary_intent: ["outdoor_walk", "short_trip"]
+      context_modifiers: ["photo_spot", "parking_needed"]
+      risk_tags: ["天气依赖", "预约", "宠物限制", "儿童安全"]
+    滨水空间:
+      companion_context: ["solo", "couple", "friends", "family_with_elderly"]
+      primary_intent: ["outdoor_walk"]
+      context_modifiers: ["photo_spot", "low_energy"]
+      risk_tags: ["天气依赖", "儿童临水风险", "步行量"]
+  亲子:
+    亲子乐园:
+      companion_context: ["family_with_children"]
+      primary_intent: ["parent_child"]
+      context_modifiers: ["rainy_day", "lively"]
+      risk_tags: ["儿童年龄限制", "排队", "预约", "噪声"]
+    儿童剧:
+      companion_context: ["family_with_children"]
+      primary_intent: ["parent_child", "culture_experience"]
+      context_modifiers: ["rainy_day"]
+      risk_tags: ["预约", "时段固定", "儿童年龄限制"]
+    室内游乐场:
+      companion_context: ["family_with_children"]
+      primary_intent: ["parent_child", "indoor_entertainment"]
+      context_modifiers: ["rainy_day", "hot_weather", "cold_weather"]
+      risk_tags: ["儿童安全", "排队", "噪声"]
+    动物园:
+      companion_context: ["family_with_children", "family_with_elderly"]
+      primary_intent: ["parent_child", "outdoor_walk"]
+      context_modifiers: ["low_budget"]
+      risk_tags: ["天气依赖", "步行量", "排队"]
+    科技馆:
+      companion_context: ["family_with_children", "friends"]
+      primary_intent: ["parent_child", "culture_experience"]
+      context_modifiers: ["rainy_day", "low_budget"]
+      risk_tags: ["预约", "排队", "闭馆日"]
+  放松疗愈:
+    SPA:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["wellness_relax"]
+      context_modifiers: ["quiet", "high_budget"]
+      risk_tags: ["预约", "价格波动"]
+    按摩:
+      companion_context: ["solo", "couple", "friends"]
+      primary_intent: ["wellness_relax"]
+      context_modifiers: ["low_energy", "no_reservation"]
+      risk_tags: ["预约", "服务质量波动"]
+    洗浴:
+      companion_context: ["solo", "friends", "family_with_elderly"]
+      primary_intent: ["wellness_relax"]
+      context_modifiers: ["rainy_day", "low_energy"]
+      risk_tags: ["隐私", "高峰排队"]
+    温泉:
+      companion_context: ["couple", "friends", "family_with_elderly"]
+      primary_intent: ["wellness_relax", "short_trip"]
+      context_modifiers: ["cold_weather", "parking_needed"]
+      risk_tags: ["预约", "短途交通", "健康禁忌"]
+    瑜伽:
+      companion_context: ["solo", "friends"]
+      primary_intent: ["wellness_relax"]
+      context_modifiers: ["quiet"]
+      risk_tags: ["预约", "体力要求"]
+    书店:
+      companion_context: ["solo", "couple", "family_with_children", "family_with_elderly"]
+      primary_intent: ["wellness_relax", "time_killing"]
+      context_modifiers: ["quiet", "rainy_day", "low_budget"]
+      risk_tags: ["座位不稳定", "儿童安静风险"]
+  宠物友好:
+    宠物餐厅:
+      companion_context: ["pet", "couple", "friends"]
+      primary_intent: ["meal"]
+      context_modifiers: ["photo_spot"]
+      risk_tags: ["宠物限制", "预约", "卫生争议"]
+    宠物公园:
+      companion_context: ["pet", "solo", "couple", "friends"]
+      primary_intent: ["outdoor_walk"]
+      context_modifiers: ["low_budget"]
+      risk_tags: ["天气依赖", "宠物证件要求", "安全风险"]
+    可带宠咖啡馆:
+      companion_context: ["pet", "solo", "couple", "friends"]
+      primary_intent: ["cafe_tea", "time_killing"]
+      context_modifiers: ["quiet", "photo_spot"]
+      risk_tags: ["宠物限制", "座位不稳定", "预约"]
+
+# ==================== 数据源配置：只定义 adapter 和字段映射，不默认下载大文件 ====================
+data_sources:
+  policy:
+    no_crawling: true
+    respect_platform_terms: true
+    default_download_large_files: false
+    real_payment_or_real_message: false
+  adapters:
+    meituan_dianping_asap:
+      name: "Meituan-Dianping ASAP"
+      purpose: "中文大众点评餐厅评论方面情感，扩展 food_quality/service_quality/atmosphere 评估词典"
+      access_mode: "offline_dataset_if_licensed"
+      default_enabled: false
+      field_mapping:
+        review_text: "comment"
+        aspect: "aspect_category"
+        sentiment: "sentiment_label"
+        poi_category: "restaurant_category"
+    asap_sent_triplet:
+      name: "ASAP_SENT / ASAP-Triplet"
+      purpose: "方面情感/三元组抽取，支持从评论抽取菜品、服务、环境、排队风险"
+      access_mode: "offline_dataset_if_licensed"
+      default_enabled: false
+      field_mapping:
+        text: "sentence"
+        aspect: "target"
+        opinion: "opinion"
+        sentiment: "polarity"
+    trd_meituan_takeout:
+      name: "TRD Meituan Takeout Dataset"
+      purpose: "外卖推荐/用户-商户交互评估；graph.bin 体积大，默认不下载"
+      access_mode: "offline_dataset_if_licensed"
+      default_enabled: false
+      skip_files_by_default: ["graph.bin"]
+      field_mapping:
+        user_id: "user_id"
+        item_id: "shop_or_item_id"
+        category: "poi_category"
+        interaction: "order_or_click"
+    crosswoz:
+      name: "CrossWOZ"
+      purpose: "中文餐馆/景点/酒店/地铁/出租多领域对话，用于槽位抽取与追问评估"
+      access_mode: "offline_dataset"
+      default_enabled: false
+      field_mapping:
+        domain: "domain"
+        intent: "dialog_act"
+        slots: "belief_state"
+        user_utterance: "user"
+        system_response: "system"
+    vitabench:
+      name: "VitaBench"
+      purpose: "生活服务 Agent 工具调用与任务评测，评估 plan/booking/order/message 的 mock 执行链"
+      access_mode: "benchmark_if_available"
+      default_enabled: false
+      field_mapping:
+        task: "instruction"
+        tool_calls: "expected_tool_calls"
+        success_criteria: "rubric"
+    amap_poi_api:
+      name: "Amap POI API"
+      purpose: "真实中国 POI 召回、地理编码、距离和营业状态查询"
+      access_mode: "official_api_key_required"
+      default_enabled: false
+      field_mapping:
+        poi_id: "id"
+        name: "name"
+        category: "type"
+        address: "address"
+        coordinates: "location"
+        business_area: "business_area"
+    meituan_union_api:
+      name: "Meituan Union API"
+      purpose: "到店/到家商品、团购券、榜单主题查询；仅使用官方授权接口"
+      access_mode: "official_api_key_required"
+      default_enabled: false
+      field_mapping:
+        deal_id: "deal_id"
+        poi_id: "poi_id"
+        title: "title"
+        price: "sale_price"
+        coupon: "coupon_info"
+        category: "category"
+    foursquare_fsq_os_places:
+      name: "Foursquare FSQ OS Places"
+      purpose: "全球 POI schema 备用，用于补齐类目层级与开放地理实体"
+      access_mode: "open_dataset"
+      default_enabled: false
+      field_mapping:
+        poi_id: "fsq_place_id"
+        name: "name"
+        category: "categories"
+        coordinates: "latitude_longitude"
+        address: "address"
+    osm_geofabrik_china:
+      name: "OpenStreetMap/Geofabrik China"
+      purpose: "开源地理基础数据备用，用于道路、商圈、公共设施、无障碍标签补充"
+      access_mode: "open_dataset"
+      default_enabled: false
+      field_mapping:
+        osm_id: "id"
+        name: "name"
+        category: "tags"
+        coordinates: "geometry"
+        accessibility: "wheelchair"
+
+# ==================== Mock 数据配置 ====================
+mock_data:
+  home_location:
+    name: "默认出发点"
+    address: "市中心默认位置"
+    coordinates:
+      lat: 31.2304
+      lng: 121.4737
+
+  default_user_context:
+    family: null
+    preferences:
+      diet: "none"
+      activity_style: "flexible"
+      food_preference: "no_preference"
+
+  business_districts:
+    - "市中心商圈"
+    - "滨江休闲区"
+    - "创意园区"
+    - "大型购物中心"
+    - "城市公园周边"
+    - "社区生活圈"
+    - "剧场展览区"
+
+# ==================== 时间线配置 ====================
+timeline_config:
+  transition_buffer_minutes: 10
+  default_meal_duration_minutes: 80
+  min_activity_duration_minutes: 45
+  max_activity_duration_minutes: 180
+  pickup_buffer_minutes: 10
+  max_total_duration_hours: 8
+  min_total_duration_hours: 2
+
+# ==================== 输出策略 ====================
+output_policy:
+  generate_candidate_count: 3
+  explain_why_not_selected: true
+  show_score_breakdown: true
+  show_triggered_constraints: true
+  show_assumptions_used: true
+  avoid_over_personalized_assumptions: true
+
+# ==================== LLM 配置 ====================
+llm_config:
+  parser:
+    provider: "deepseek"
+    model: "deepseek-chat"
+    enabled: true
+    fallback_to_mock: true
+  temperature: 0.1
+  max_tokens: 2000
+  timeout_seconds: 8

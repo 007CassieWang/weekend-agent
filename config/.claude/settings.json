@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kill 60539 87250)",
+      "Bash(nohup python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(curl -s http://localhost:8000/api/health)",
+      "Bash(cat /tmp/backend.log | tail -20)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\": [\"couple\"], \"time_window\": \"afternoon\", \"transportation\": \"transit\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\": [\"couple\"], \"time_window\": \"afternoon\", \"transportation\": \"transit\", \"slot_answers\": {\"budget_level\": \"medium\", \"photo_spot\": true}}')"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(python3 -c \"import prompts; print\\('prompts.py OK'\\)\")",
+      "Bash(python3 -c \"import api; print\\('api.py OK'\\)\")",
+      "Bash(kill 28051 51828)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\":[\"family_with_children\"],\"time_window\":\"weekend_full_day\",\"transportation\":\"driving\",\"context_modifiers\":[\"parking_needed\"]}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -H 'Content-Type: application/json' -d '{\"message\":\"\",\"structured_data\":{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"],\"followups\":[\"想吃火锅\",\"热闹一点\"]}}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('success:', d['success']\\); print\\('title:', d['best_plan']['title']\\); print\\('score:', d['best_plan']['score']\\)\")",
+      "Bash(curl -s http://localhost:5173/src/App.jsx)",
+      "Bash(python3 -c \"import prompts; import api; print\\('Both modules OK'\\)\")",
+      "Bash(pkill -f \"uvicorn api:app\")",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"]}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -H 'Content-Type: application/json' -d '{\"message\":\"\",\"structured_data\":{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"],\"slot_answers\":{\"我们一共几个人？\":\"3-5\",\"想吃啥菜系？\":\"hotpot\",\"人均预算多少？\":\"medium\"}}}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('success:', d['success']\\); print\\('title:', d['best_plan']['title']\\); print\\('request companion_context:', d['request'].get\\('companion_context'\\)\\); print\\('request context_modifiers:', d['request'].get\\('context_modifiers'\\)\\)\")",
+      "Bash(curl -s http://localhost:5173/src/styles.css)"
+    ]
+  }
+}

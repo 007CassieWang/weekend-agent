@@ -1,0 +1,2132 @@
+version: 3
+description: 大众点评风格的上海本地生活 mock POI seed。名称对标真实大众点评/美团 POI 质感，用于产品验证和评分测试。
+metadata:
+  city: 上海
+  source: deepseek_generated_mock
+  real_world_claims: false
+  generator: scripts/generate_poi_seed.py
+activities:
+- id: act_001
+  name: 来福士广场
+  type: mall
+  location:
+    name: 来福士广场
+    address: 上海市黄浦区西藏中路268号
+    coordinates:
+      lat: 31.232
+      lng: 121.473
+    district: 人民广场商圈
+  distance_km: 0.1
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 人民广场核心地标，集购物、餐饮、娱乐于一体，品牌齐全。
+  tags:
+  - 购物中心
+  - 地铁直达
+  - 美食
+  - 潮流
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 时尚
+  - 热闹
+  recommendation_reason_seed: 人民广场站直达，吃喝玩乐一站式搞定。
+- id: act_002
+  name: 新世界城
+  type: mall
+  location:
+    name: 新世界城
+    address: 上海市黄浦区南京西路2-68号
+    coordinates:
+      lat: 31.233
+      lng: 121.47
+    district: 人民广场商圈
+  distance_km: 0.3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 200
+  queue_minutes: 15
+  reservation_available: false
+  need_booking: false
+  description: 老牌百货升级，拥有上海最大室内游乐场，亲子家庭必逛。
+  tags:
+  - 百货
+  - 亲子
+  - 游乐
+  - 美食
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: high
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 排队
+  - 停车拥堵
+  atmosphere_tags:
+  - 家庭
+  - 热闹
+  recommendation_reason_seed: 带娃必去，室内游乐场一整天玩不够。
+- id: act_003
+  name: 第一百货商业中心
+  type: mall
+  location:
+    name: 第一百货商业中心
+    address: 上海市黄浦区南京东路800号
+    coordinates:
+      lat: 31.235
+      lng: 121.476
+    district: 人民广场商圈
+  distance_km: 0.5
+  duration_minutes: 100
+  suggested_duration_minutes: 100
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 南京东路老字号，翻新后融合传统与潮流，网红店聚集。
+  tags:
+  - 老字号
+  - 网红
+  - 购物
+  - 美食
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 复古
+  - 潮流
+  recommendation_reason_seed: 老上海情怀与新潮流的碰撞，拍照打卡好去处。
+- id: act_004
+  name: 世茂广场
+  type: mall
+  location:
+    name: 世茂广场
+    address: 上海市黄浦区南京东路819号
+    coordinates:
+      lat: 31.234
+      lng: 121.474
+    district: 人民广场商圈
+  distance_km: 0.4
+  duration_minutes: 130
+  suggested_duration_minutes: 130
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 180
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 潮流地标，拥有M&M's旗舰店和乐高探索中心，年轻人最爱。
+  tags:
+  - 潮流
+  - 旗舰店
+  - 亲子
+  - 打卡
+  poi_category: 商场综合体.购物中心
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 排队
+  - 停车拥堵
+  atmosphere_tags:
+  - 时尚
+  - 热闹
+  recommendation_reason_seed: M&M's和乐高旗舰店，潮人打卡圣地。
+- id: act_005
+  name: 香港名都
+  type: mall
+  location:
+    name: 香港名都
+    address: 上海市黄浦区淮海东路99号
+    coordinates:
+      lat: 31.229
+      lng: 121.478
+    district: 人民广场商圈
+  distance_km: 0.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 100
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 淮海路小体量商场，餐饮丰富，适合快速觅食。
+  tags:
+  - 餐饮
+  - 平价
+  - 便捷
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags: []
+  atmosphere_tags:
+  - 休闲
+  - 日常
+  recommendation_reason_seed: 淮海路上性价比高的美食聚集地。
+- id: act_006
+  name: 上海来福士广场
+  type: mall
+  location:
+    name: 上海来福士广场
+    address: 上海市黄浦区西藏中路268号
+    coordinates:
+      lat: 31.232
+      lng: 121.473
+    district: 人民广场商圈
+  distance_km: 0.1
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 人民广场核心地标，集购物、餐饮、娱乐于一体，品牌齐全。
+  tags:
+  - 购物中心
+  - 地铁直达
+  - 美食
+  - 潮流
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 时尚
+  - 热闹
+  recommendation_reason_seed: 人民广场站直达，吃喝玩乐一站式搞定。
+- id: act_007
+  name: 晶耀前滩
+  type: commercial_street
+  location:
+    name: 晶耀前滩
+    address: 上海市浦东新区耀体路308号
+    coordinates:
+      lat: 31.155
+      lng: 121.483
+    district: 前滩太古里周边
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 前滩核心商圈，开放式街区设计，餐饮亲子一站搞定。
+  tags:
+  - 亲子
+  - 美食
+  - 购物
+  - 街区
+  poi_category: 商业街/步行街.开放式街区
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: mixed
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 休闲
+  - 家庭
+  recommendation_reason_seed: 前滩遛娃首选，户外空间大，餐饮选择多。
+- id: act_008
+  name: 前滩休闲公园步道
+  type: commercial_street
+  location:
+    name: 前滩休闲公园步道
+    address: 上海市浦东新区前滩大道北侧
+    coordinates:
+      lat: 31.152
+      lng: 121.479
+    district: 前滩太古里周边
+  distance_km: 1.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿江开放式步道，适合散步骑行，看江景吹江风。
+  tags:
+  - 散步
+  - 骑行
+  - 江景
+  - 免费
+  poi_category: 商业街/步行街.滨水步道
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: false
+  parking_available: false
+  risk_tags:
+  - 天气依赖
+  atmosphere_tags:
+  - 自然
+  - 安静
+  recommendation_reason_seed: 免费开放的滨江步道，拍照打卡绝佳。
+- id: act_009
+  name: 三林塘老街
+  type: commercial_street
+  location:
+    name: 三林塘老街
+    address: 上海市浦东新区三林路810号
+    coordinates:
+      lat: 31.148
+      lng: 121.488
+    district: 前滩太古里周边
+  distance_km: 2.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 50
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 百年历史老街，保留传统建筑，小吃和手工艺品丰富。
+  tags:
+  - 历史
+  - 小吃
+  - 手工艺
+  - 老街
+  poi_category: 商业街/步行街.历史街区
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 怀旧
+  - 热闹
+  recommendation_reason_seed: 感受老上海风情，吃正宗三林塘肉皮。
+- id: act_010
+  name: 世纪公园当代艺术馆
+  type: exhibition
+  location:
+    name: 世纪公园当代艺术馆
+    address: 上海市浦东新区锦绣路1001号
+    coordinates:
+      lat: 31.21
+      lng: 121.554
+    district: 世纪公园周边
+  distance_km: 1.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 6
+  group_friendly: true
+  price_per_person: 80
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 位于世纪公园内，定期举办国内外当代艺术展，空间开阔，适合亲子观展。
+  tags:
+  - 当代艺术
+  - 亲子友好
+  - 公园景观
+  - 定期换展
+  poi_category: 展览/美术馆.艺术馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags: []
+  atmosphere_tags:
+  - 安静
+  - 文艺
+  - 自然
+  recommendation_reason_seed: 世纪公园里的艺术绿洲，遛娃看展两不误。
+- id: act_011
+  name: 浦东嘉里城艺术空间
+  type: exhibition
+  location:
+    name: 浦东嘉里城艺术空间
+    address: 上海市浦东新区花木路1378号
+    coordinates:
+      lat: 31.205
+      lng: 121.548
+    district: 世纪公园周边
+  distance_km: 2.0
+  duration_minutes: 60
+  suggested_duration_minutes: 60
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 嘉里城商场内的免费艺术展区，常有互动装置和亲子工作坊，逛商场顺路看展。
+  tags:
+  - 免费
+  - 商场展览
+  - 互动装置
+  - 亲子工作坊
+  poi_category: 展览/美术馆.公共空间
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags: []
+  atmosphere_tags:
+  - 休闲
+  - 热闹
+  - 亲子
+  recommendation_reason_seed: 免费又好玩，带娃逛商场顺便看个展。
+- id: act_012
+  name: 上海科技馆特展厅
+  type: exhibition
+  location:
+    name: 上海科技馆特展厅
+    address: 上海市浦东新区世纪大道2000号
+    coordinates:
+      lat: 31.215
+      lng: 121.54
+    district: 世纪公园周边
+  distance_km: 2.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 45
+  queue_minutes: 20
+  reservation_available: true
+  need_booking: true
+  description: 科技馆内临时特展，主题涵盖科学、自然与艺术，互动性强，适合全年龄段。
+  tags:
+  - 科技馆
+  - 互动体验
+  - 科普
+  - 临时展览
+  poi_category: 展览/美术馆.科技馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 排队
+  - 预约
+  atmosphere_tags:
+  - 求知
+  - 热闹
+  - 亲子
+  recommendation_reason_seed: 科技馆特展，寓教于乐，孩子玩到不想走。
+- id: act_013
+  name: 世纪汇广场光影展
+  type: exhibition
+  location:
+    name: 世纪汇广场光影展
+    address: 上海市浦东新区世纪大道1192号
+    coordinates:
+      lat: 31.218
+      lng: 121.53
+    district: 世纪公园周边
+  distance_km: 3.0
+  duration_minutes: 45
+  suggested_duration_minutes: 45
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 68
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: false
+  description: 沉浸式光影艺术展，四季主题变换，网红打卡圣地，出片率极高。
+  tags:
+  - 沉浸式
+  - 光影
+  - 网红打卡
+  - 商场展览
+  poi_category: 展览/美术馆.沉浸式体验
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags: []
+  atmosphere_tags:
+  - 浪漫
+  - 时尚
+  - 梦幻
+  recommendation_reason_seed: 光影交织的梦幻空间，随手一拍都是大片。
+- id: act_014
+  name: 上海自然博物馆
+  type: museum
+  location:
+    name: 上海自然博物馆
+    address: 上海市静安区北京西路510号
+    coordinates:
+      lat: 31.228
+      lng: 121.455
+    district: 静安寺商圈
+  distance_km: 0.8
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 30
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 亚洲最大的自然博物馆之一，恐龙骨架和动物标本超震撼，亲子必打卡。
+  tags:
+  - 亲子
+  - 恐龙
+  - 科普
+  - 室内
+  - 网红打卡
+  poi_category: 博物馆.科技馆.自然博物馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: high
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  - 排队
+  atmosphere_tags:
+  - 知识
+  - 安静
+  - 亲子
+  recommendation_reason_seed: 上海自然博物馆恐龙展区是孩子的最爱，标本栩栩如生，寓教于乐。
+- id: act_015
+  name: 上海电影博物馆
+  type: museum
+  location:
+    name: 上海电影博物馆
+    address: 上海市徐汇区漕溪北路595号
+    coordinates:
+      lat: 31.188
+      lng: 121.436
+    district: 静安寺商圈
+  distance_km: 4.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 5
+  group_friendly: true
+  price_per_person: 60
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 沉浸式体验电影发展史，互动装置多，适合影迷和亲子家庭。
+  tags:
+  - 电影
+  - 互动
+  - 亲子
+  - 文化
+  - 室内
+  poi_category: 博物馆.科技馆.行业博物馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 排队
+  atmosphere_tags:
+  - 文艺
+  - 怀旧
+  - 科技感
+  recommendation_reason_seed: 电影博物馆的4D影院和动画展区互动性超强，小朋友玩得不想走。
+- id: act_016
+  name: 上海儿童博物馆
+  type: museum
+  location:
+    name: 上海儿童博物馆
+    address: 上海市长宁区宋园路61号
+    coordinates:
+      lat: 31.209
+      lng: 121.387
+    district: 静安寺商圈
+  distance_km: 3.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 2
+  group_friendly: true
+  price_per_person: 20
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 专为儿童设计的科普乐园，动手实验和角色扮演区，低龄宝宝友好。
+  tags:
+  - 亲子
+  - 儿童
+  - 科普
+  - 互动
+  - 室内
+  poi_category: 博物馆.科技馆.儿童博物馆
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags: []
+  atmosphere_tags:
+  - 童趣
+  - 热闹
+  - 教育
+  recommendation_reason_seed: 儿童博物馆的超市角色扮演区让宝宝沉浸式购物，性价比超高。
+- id: act_017
+  name: 大学路滨河绿地
+  type: park
+  location:
+    name: 大学路滨河绿地
+    address: 上海市杨浦区大学路近政民路
+    coordinates:
+      lat: 31.298
+      lng: 121.515
+    district: 五角场商圈
+  distance_km: 2
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿着小河的线性公园，草坪开阔，适合野餐散步，周边咖啡馆林立。
+  tags:
+  - 滨水步道
+  - 野餐
+  - 遛狗
+  - 拍照
+  poi_category: 公园.滨水公园
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 天气依赖
+  atmosphere_tags:
+  - 文艺
+  - 清新
+  recommendation_reason_seed: 闹中取静的滨水绿带，适合周末放空。
+- id: act_018
+  name: 新江湾城生态湿地
+  type: park
+  location:
+    name: 新江湾城生态湿地
+    address: 上海市杨浦区政和路与国秀路交叉口
+    coordinates:
+      lat: 31.31
+      lng: 121.505
+    district: 五角场商圈
+  distance_km: 3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 城市中的原生态湿地，观鸟步道和木栈道，自然气息浓厚。
+  tags:
+  - 湿地
+  - 观鸟
+  - 自然
+  - 徒步
+  poi_category: 公园.湿地公园
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: false
+  parking_available: true
+  risk_tags:
+  - 天气依赖
+  - 蚊虫
+  atmosphere_tags:
+  - 自然
+  - 宁静
+  recommendation_reason_seed: 市区少有的生态秘境，带娃亲近自然首选。
+- id: act_019
+  name: 创智天地广场
+  type: park
+  location:
+    name: 创智天地广场
+    address: 上海市杨浦区淞沪路290号
+    coordinates:
+      lat: 31.293
+      lng: 121.52
+    district: 五角场商圈
+  distance_km: 2.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 开放式广场，常有市集和活动，周边餐饮丰富，适合闲逛。
+  tags:
+  - 广场
+  - 市集
+  - 活动
+  - 餐饮
+  poi_category: 公园.城市广场
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 排队（活动时）
+  atmosphere_tags:
+  - 活力
+  - 潮流
+  recommendation_reason_seed: 五角场核心区的活力聚集地，吃喝玩乐一站式。
+- id: act_020
+  name: 江湾体育场滨水步道
+  type: park
+  location:
+    name: 江湾体育场滨水步道
+    address: 上海市杨浦区国和路346号
+    coordinates:
+      lat: 31.305
+      lng: 121.51
+    district: 五角场商圈
+  distance_km: 2
+  duration_minutes: 100
+  suggested_duration_minutes: 100
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿河而建的健身步道，连接体育场，适合跑步和散步。
+  tags:
+  - 步道
+  - 跑步
+  - 健身
+  - 滨水
+  poi_category: 公园.滨水公园
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 天气依赖
+  atmosphere_tags:
+  - 运动
+  - 休闲
+  recommendation_reason_seed: 沿河慢跑好去处，人少景美。
+- id: act_021
+  name: 衡山电影院
+  type: cinema
+  location:
+    name: 衡山电影院
+    address: 上海市徐汇区衡山路838号
+    coordinates:
+      lat: 31.205
+      lng: 121.442
+    district: 武康路衡复街区
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 80
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 老牌电影院，位于衡复历史风貌区，装修复古，观影氛围浓厚。
+  tags:
+  - 老字号
+  - 历史建筑
+  - 文艺
+  - 小厅
+  - 衡复风貌
+  poi_category: 电影院
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 复古
+  - 文艺
+  - 安静
+  recommendation_reason_seed: 在衡复历史街区体验老上海电影情怀，适合文艺青年和怀旧人群。
+- id: act_022
+  name: 武康路光影艺术影院
+  type: cinema
+  location:
+    name: 武康路光影艺术影院
+    address: 上海市徐汇区武康路376号
+    coordinates:
+      lat: 31.209
+      lng: 121.438
+    district: 武康路衡复街区
+  distance_km: 1.2
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: false
+  child_min_age: 12
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 5
+  reservation_available: true
+  need_booking: true
+  description: 小众艺术影院，定期举办导演见面会和主题影展，环境优雅。
+  tags:
+  - 艺术影院
+  - 小众
+  - 影展
+  - 文艺
+  - 武康路
+  poi_category: 电影院
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  - 停车拥堵
+  atmosphere_tags:
+  - 艺术
+  - 安静
+  - 高级
+  recommendation_reason_seed: 武康路上的艺术影院，观影之余可漫步老洋房街区，体验文艺上海。
+- id: act_023
+  name: 星聚会KTV（新天地店）
+  type: ktv
+  location:
+    name: 星聚会KTV（新天地店）
+    address: 上海市黄浦区马当路245号新天地时尚B1层
+    coordinates:
+      lat: 31.218
+      lng: 121.475
+    district: 新天地周边
+  distance_km: 0.3
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 新天地人气KTV，包厢设备新，曲库全，适合朋友聚会嗨唱。
+  tags:
+  - KTV
+  - 聚会
+  - 唱歌
+  - 新天地
+  - 夜生活
+  poi_category: 休闲娱乐.KTV
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  - 排队
+  atmosphere_tags:
+  - 热闹
+  - 时尚
+  recommendation_reason_seed: 新天地核心位置，地铁直达，聚会首选。
+- id: act_024
+  name: 迷之密室逃脱（新天地店）
+  type: 桌游
+  location:
+    name: 迷之密室逃脱（新天地店）
+    address: 上海市黄浦区济南路9号8楼
+    coordinates:
+      lat: 31.216
+      lng: 121.473
+    district: 新天地周边
+  distance_km: 0.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 8
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 20
+  reservation_available: true
+  need_booking: true
+  description: 沉浸式密室体验，机械解谜与剧情结合，适合团队协作。
+  tags:
+  - 密室逃脱
+  - 解谜
+  - 团队
+  - 沉浸式
+  - 新天地
+  poi_category: 休闲娱乐.密室逃脱
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  - 排队
+  atmosphere_tags:
+  - 刺激
+  - 烧脑
+  recommendation_reason_seed: 新天地热门密室，主题新颖，适合朋友或公司团建。
+- id: act_025
+  name: 戏精学院·沉浸式剧本杀（新天地旗舰店）
+  type: 剧本杀
+  location:
+    name: 戏精学院·沉浸式剧本杀（新天地旗舰店）
+    address: 上海市黄浦区淮海中路333号新天地广场5层
+    coordinates:
+      lat: 31.219
+      lng: 121.476
+    district: 新天地周边
+  distance_km: 0.4
+  duration_minutes: 180
+  suggested_duration_minutes: 180
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 专业剧本杀馆，换装沉浸，DM带本，体验感满分。
+  tags:
+  - 剧本杀
+  - 沉浸式
+  - 换装
+  - 推理
+  - 新天地
+  poi_category: 休闲娱乐.剧本杀
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  atmosphere_tags:
+  - 沉浸
+  - 剧情
+  recommendation_reason_seed: 新天地旗舰店，剧本质量高，适合剧本杀爱好者。
+- id: act_026
+  name: 静安寺手作工坊
+  type: handicraft
+  location:
+    name: 静安寺手作工坊
+    address: 上海市静安区南京西路1688号
+    coordinates:
+      lat: 31.224
+      lng: 121.448
+    district: 静安寺商圈
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 5
+  group_friendly: true
+  price_per_person: 198
+  queue_minutes: 0
+  reservation_available: true
+  need_booking: true
+  description: 隐藏在静安寺商圈的宝藏手作店，提供陶艺、木工、皮具等多种手作体验，老师耐心指导，成品可带走。
+  tags:
+  - 手工体验
+  - 陶艺
+  - 木工
+  - 静安寺
+  - 亲子活动
+  poi_category: 手作/市集.手作体验
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 预约
+  atmosphere_tags:
+  - 文艺
+  - 安静
+  recommendation_reason_seed: 静安寺附近的手作体验，适合亲子或朋友一起，放松身心。
+- id: act_027
+  name: 巨鹿路创意市集
+  type: handicraft
+  location:
+    name: 巨鹿路创意市集
+    address: 上海市静安区巨鹿路758号
+    coordinates:
+      lat: 31.226
+      lng: 121.452
+    district: 静安寺商圈
+  distance_km: 1.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 周末限定的户外创意市集，汇集独立设计师、手作达人、美食摊位，还有现场音乐表演，氛围超棒。
+  tags:
+  - 创意市集
+  - 独立设计
+  - 手作
+  - 美食
+  - 周末活动
+  poi_category: 手作/市集.创意市集
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 天气依赖
+  atmosphere_tags:
+  - 热闹
+  - 潮流
+  recommendation_reason_seed: 巨鹿路周末必逛的创意市集，淘手作好物，感受上海文艺气息。
+- id: act_028
+  name: 芮欧百货手工坊
+  type: handicraft
+  location:
+    name: 芮欧百货手工坊
+    address: 上海市静安区南京西路1601号
+    coordinates:
+      lat: 31.225
+      lng: 121.449
+    district: 静安寺商圈
+  distance_km: 0.3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 8
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 芮欧百货内的高端手工坊，提供金工银饰、皮具定制等课程，环境优雅，适合情侣或闺蜜体验。
+  tags:
+  - 金工
+  - 银饰
+  - 皮具
+  - 高端手工
+  - 静安寺
+  poi_category: 手作/市集.手作体验
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 预约
+  - 排队
+  atmosphere_tags:
+  - 精致
+  - 优雅
+  recommendation_reason_seed: 芮欧百货内的精品手工坊，亲手打造专属饰品，品质感十足。
+- id: act_029
+  name: 书屿SPA·五角场旗舰店
+  type: spa
+  location:
+    name: 书屿SPA·五角场旗舰店
+    address: 上海市杨浦区淞沪路77号万达广场B1层
+    coordinates:
+      lat: 31.298
+      lng: 121.518
+    district: 五角场商圈
+  distance_km: 0.3
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 298
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 藏在书店里的静心SPA，精油香氛与阅读结合，适合压力大的都市人。
+  tags:
+  - 精油SPA
+  - 书店风
+  - 减压
+  - 五角场
+  - 预约制
+  poi_category: 生活服务.美容SPA
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 预约
+  atmosphere_tags:
+  - 安静
+  - 文艺
+  - 治愈
+  recommendation_reason_seed: 一边翻书一边做SPA，五角场白领的隐秘放松角落。
+- id: act_030
+  name: 云水间·身心放松馆
+  type: spa
+  location:
+    name: 云水间·身心放松馆
+    address: 上海市杨浦区政通路100号创智天地3号楼
+    coordinates:
+      lat: 31.302
+      lng: 121.51
+    district: 五角场商圈
+  distance_km: 0.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: false
+  child_min_age: 12
+  group_friendly: true
+  price_per_person: 398
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 日式禅意SPA，提供颂钵疗愈和热石按摩，环境静谧雅致。
+  tags:
+  - 日式SPA
+  - 颂钵
+  - 热石
+  - 禅意
+  - 五角场
+  poi_category: 生活服务.美容SPA
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  risk_tags:
+  - 预约
+  atmosphere_tags:
+  - 禅意
+  - 安静
+  - 高端
+  recommendation_reason_seed: 五角场难得的高品质日式SPA，颂钵疗愈让你卸下疲惫。
+- id: act_031
+  name: 阅光·沉浸式阅读角
+  type: spa
+  location:
+    name: 阅光·沉浸式阅读角
+    address: 上海市杨浦区大学路118号
+    coordinates:
+      lat: 31.295
+      lng: 121.512
+    district: 五角场商圈
+  distance_km: 0.5
+  duration_minutes: 180
+  suggested_duration_minutes: 180
+  child_friendly: true
+  child_min_age: 6
+  group_friendly: true
+  price_per_person: 68
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 大学路上的独立书店+轻SPA体验区，可边读书边享受头部按摩。
+  tags:
+  - 书店
+  - 头部按摩
+  - 咖啡
+  - 大学路
+  - 文艺
+  poi_category: 生活服务.书店
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  risk_tags:
+  - 停车拥堵
+  atmosphere_tags:
+  - 文艺
+  - 安静
+  - 小清新
+  recommendation_reason_seed: 大学路上的宝藏书店，看书累了还能做个头部SPA，性价比超高。
+restaurants:
+- id: rest_001
+  name: 鸿姐老火锅
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 鸿姐老火锅
+    address: 上海市黄浦区云南南路118号
+    coordinates:
+      lat: 31.235
+      lng: 121.475
+    district: 人民广场商圈
+  distance_km: 0.8
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 120
+  reservation_available: false
+  need_booking: true
+  description: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝，排队王之一。
+  signature_dishes:
+  - 招牌嫩牛肉
+  - 8秒土豆丝
+  - 手工红糖冰汤圆
+  tags:
+  - 重庆火锅
+  - 排队王
+  - 牛油锅底
+  - 人民广场
+  - 网红店
+  poi_category: 美食.火锅
+  risk_tags:
+  - 排队久
+  - 环境嘈杂
+  atmosphere_tags:
+  - 热闹
+  - 市井
+  recommendation_reason_seed: 地道重庆味，辣得过瘾，适合朋友聚餐。
+- id: rest_002
+  name: 捞王锅物料理
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 捞王锅物料理
+    address: 上海市黄浦区南京西路388号仙乐斯广场3楼
+    coordinates:
+      lat: 31.228
+      lng: 121.468
+    district: 人民广场商圈
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 160
+  queue_minutes: 60
+  reservation_available: true
+  need_booking: false
+  description: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心。
+  signature_dishes:
+  - 胡椒猪肚鸡锅
+  - 爆浆手打虾丸
+  - 雪花牛肉
+  tags:
+  - 猪肚鸡
+  - 养生火锅
+  - 适合家庭
+  - 服务好
+  - 人民广场
+  poi_category: 美食.火锅
+  risk_tags: []
+  atmosphere_tags:
+  - 温馨
+  - 干净
+  recommendation_reason_seed: 暖心暖胃的猪肚鸡，老少皆宜。
+- id: rest_003
+  name: 高老九火锅
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 高老九火锅
+    address: 上海市黄浦区金陵东路569号汇都国际2楼
+    coordinates:
+      lat: 31.23
+      lng: 121.48
+    district: 人民广场商圈
+  distance_km: 1.0
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 130
+  queue_minutes: 90
+  reservation_available: false
+  need_booking: true
+  description: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵好去处。
+  signature_dishes:
+  - 九宫格锅底
+  - 鲜毛肚
+  - 耗儿鱼
+  tags:
+  - 重庆火锅
+  - 九宫格
+  - 性价比
+  - 人民广场
+  - 夜宵
+  poi_category: 美食.火锅
+  risk_tags:
+  - 排队久
+  - 油烟重
+  atmosphere_tags:
+  - 热闹
+  - 接地气
+  recommendation_reason_seed: 九宫格吃法正宗，价格实惠，适合朋友聚会。
+- id: rest_004
+  name: 很久以前羊肉串
+  type: bbq
+  cuisine_type: 烧烤
+  location:
+    name: 很久以前羊肉串
+    address: 上海市浦东新区陆家嘴环路166号
+    coordinates:
+      lat: 31.242
+      lng: 121.503
+    district: 陆家嘴滨江
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 招牌呼伦贝尔羊肉串，每串都来自草原羔羊，肉质鲜嫩多汁，搭配自制蘸料更是一绝。
+  signature_dishes:
+  - 呼伦贝尔羊肉串
+  - 烤鸡翅
+  - 烤馒头片
+  - 烤韭菜
+  tags:
+  - 羊肉串
+  - 夜宵
+  - 排队王
+  - 陆家嘴
+  - 聚餐
+  poi_category: 美食.烧烤
+  risk_tags: []
+  atmosphere_tags:
+  - 热闹
+  - 接地气
+  recommendation_reason_seed: 陆家嘴人气最旺的羊肉串店，草原直供羊肉，夜宵首选。
+- id: rest_005
+  name: 三兄弟烧烤
+  type: bbq
+  cuisine_type: 烧烤
+  location:
+    name: 三兄弟烧烤
+    address: 上海市浦东新区浦东南路999号
+    coordinates:
+      lat: 31.238
+      lng: 121.498
+    district: 陆家嘴滨江
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 85
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: false
+  description: 老上海风味烧烤，秘制酱料腌制入味，烤串分量足，性价比超高，非常适合朋友聚会。
+  signature_dishes:
+  - 秘制烤牛肉串
+  - 烤生蚝
+  - 烤茄子
+  - 烤年糕
+  tags:
+  - 老字号
+  - 平价
+  - 聚餐
+  - 陆家嘴
+  - 生蚝
+  poi_category: 美食.烧烤
+  risk_tags: []
+  atmosphere_tags:
+  - 温馨
+  - 家庭友好
+  recommendation_reason_seed: 陆家嘴性价比之王，老上海味道，适合带家人一起撸串。
+- id: rest_006
+  name: 炙壹·炉端烧
+  type: japanese
+  cuisine_type: 日料
+  location:
+    name: 炙壹·炉端烧
+    address: 上海市闵行区申长路688号虹桥天地北区B1-06
+    coordinates:
+      lat: 31.206
+      lng: 121.376
+    district: 虹桥天地周边
+  distance_km: 0.3
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: true
+  description: 主打炉端烧和活海鲜，明火炭烤，新鲜看得见。必点北海道金吉鱼和澳洲M9和牛。
+  signature_dishes:
+  - 北海道金吉鱼
+  - 澳洲M9和牛
+  - 蟹味增甲罗烧
+  - 明太子山药
+  tags:
+  - 炉端烧
+  - 海鲜
+  - 日式烧烤
+  - 虹桥天地
+  - 商务宴请
+  poi_category: 美食.日料
+  risk_tags: []
+  atmosphere_tags:
+  - 安静
+  - 高端
+  - 有包间
+  recommendation_reason_seed: 虹桥天地人气日料，炉端烧专营，海鲜和牛品质出众。
+- id: rest_007
+  name: 鮨匠·寿司
+  type: japanese
+  cuisine_type: 日料
+  location:
+    name: 鮨匠·寿司
+    address: 上海市闵行区申滨南路998号龙湖天街B1-22
+    coordinates:
+      lat: 31.202
+      lng: 121.372
+    district: 虹桥天地周边
+  distance_km: 0.6
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 180
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 高性价比江户前寿司，食材每日空运。推荐鹅肝寿司和星鳗寿司，入口即化。
+  signature_dishes:
+  - 鹅肝寿司
+  - 星鳗寿司
+  - 三文鱼腩刺身
+  - 海鲜丼
+  tags:
+  - 寿司
+  - 刺身
+  - 虹桥天地
+  - 平日晚餐
+  - 一人食
+  poi_category: 美食.日料
+  risk_tags: []
+  atmosphere_tags:
+  - 温馨
+  - 开放厨房
+  - 吧台座
+  recommendation_reason_seed: 虹桥天街性价比寿司店，食材新鲜，口味地道。
+- id: rest_008
+  name: 新荣记(北外滩店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 新荣记(北外滩店)
+    address: 上海市虹口区东大名路501号白玉兰广场3楼
+    coordinates:
+      lat: 31.252
+      lng: 121.495
+    district: 北外滩滨水区
+  distance_km: 0.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 600
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 台州海鲜粤菜标杆，必点家烧黄鱼、脆皮乳鸽，环境雅致适合商务宴请。
+  signature_dishes:
+  - 家烧黄鱼
+  - 脆皮乳鸽
+  - 和牛蛋挞
+  tags:
+  - 米其林
+  - 海鲜
+  - 粤菜
+  - 商务宴请
+  - 北外滩
+  poi_category: 美食.粤菜/本帮菜
+  risk_tags:
+  - 排队
+  atmosphere_tags:
+  - 高端
+  - 江景
+  recommendation_reason_seed: 北外滩江景粤菜，米其林品质稳如泰山。
+- id: rest_009
+  name: 老吉士(北外滩来福士店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 老吉士(北外滩来福士店)
+    address: 上海市虹口区东大名路999号北外滩来福士广场B1层
+    coordinates:
+      lat: 31.254
+      lng: 121.498
+    district: 北外滩滨水区
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 本帮菜经典老店，红烧肉、蟹粉豆腐必点，浓油赤酱正宗上海味道。
+  signature_dishes:
+  - 红烧肉
+  - 蟹粉豆腐
+  - 油爆虾
+  tags:
+  - 本帮菜
+  - 老字号
+  - 浓油赤酱
+  - 排队王
+  - 北外滩
+  poi_category: 美食.粤菜/本帮菜
+  risk_tags:
+  - 排队久
+  atmosphere_tags:
+  - 怀旧
+  - 热闹
+  recommendation_reason_seed: 上海本帮菜排队王，红烧肉一口入魂。
+- id: rest_010
+  name: 点都德(北外滩店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 点都德(北外滩店)
+    address: 上海市虹口区东大名路1089号北外滩来福士广场4层
+    coordinates:
+      lat: 31.255
+      lng: 121.497
+    district: 北外滩滨水区
+  distance_km: 1.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: false
+  description: 广州老字号早茶，金沙红米肠、虾饺皇人气爆棚，全天候茶市。
+  signature_dishes:
+  - 金沙红米肠
+  - 虾饺皇
+  - 蒸凤爪
+  tags:
+  - 粤式点心
+  - 早茶
+  - 老字号
+  - 北外滩
+  - 家庭聚餐
+  poi_category: 美食.粤菜/本帮菜
+  risk_tags: []
+  atmosphere_tags:
+  - 热闹
+  - 传统
+  recommendation_reason_seed: 正宗广州早茶开到北外滩，红米肠必点。
+- id: rest_011
+  name: Le Comptoir de Pierre Gagnaire
+  type: western
+  cuisine_type: 西餐
+  location:
+    name: Le Comptoir de Pierre Gagnaire
+    address: 上海市黄浦区太仓路181弄新天地北里18号
+    coordinates:
+      lat: 31.217
+      lng: 121.474
+    district: 新天地周边
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 1200
+  queue_minutes: 0
+  reservation_available: true
+  need_booking: true
+  description: 法国名厨Pierre Gagnaire的上海分店，经典法式料理，招牌油封鸭腿和黑松露意面，环境优雅。
+  signature_dishes:
+  - 油封鸭腿
+  - 黑松露意面
+  - 烤羊排
+  tags:
+  - 法式
+  - 高端
+  - 约会圣地
+  - 新天地
+  - 米其林
+  poi_category: 美食.西餐
+  risk_tags:
+  - 高人均
+  atmosphere_tags:
+  - 浪漫
+  - 精致
+  - 安静
+  recommendation_reason_seed: 新天地法餐标杆，米其林品质，约会首选。
+- id: rest_012
+  name: Polux by Paul Pairet
+  type: western
+  cuisine_type: 西餐
+  location:
+    name: Polux by Paul Pairet
+    address: 上海市黄浦区太仓路181弄新天地北里17号
+    coordinates:
+      lat: 31.218
+      lng: 121.473
+    district: 新天地周边
+  distance_km: 0.3
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 400
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: false
+  description: Paul Pairet打造的轻松法式小馆，招牌脆皮猪排和土豆泥，性价比超高，适合朋友聚餐。
+  signature_dishes:
+  - 脆皮猪排
+  - 土豆泥
+  - 法式吐司
+  tags:
+  - 法式
+  - 小馆
+  - 平价
+  - 新天地
+  - 网红
+  poi_category: 美食.西餐
+  risk_tags:
+  - 排队
+  atmosphere_tags:
+  - 休闲
+  - 热闹
+  - 温馨
+  recommendation_reason_seed: Paul Pairet的平价法餐，轻松氛围，必吃脆皮猪排。
+- id: rest_013
+  name: 永平里
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 永平里
+    address: 上海市黄浦区巨鹿路158号
+    coordinates:
+      lat: 31.225
+      lng: 121.46
+    district: 人民广场商圈
+  distance_km: 1.5
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 65
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 藏在弄堂里的ins风咖啡店，主打手冲和创意甜品，巴斯克蛋糕必点
+  signature_dishes:
+  - 巴斯克芝士蛋糕
+  - dirty咖啡
+  - 提拉米苏
+  tags:
+  - 网红打卡
+  - 手冲咖啡
+  - 弄堂小店
+  - 甜品
+  - 拍照圣地
+  poi_category: 美食.咖啡/茶馆/甜品
+  risk_tags:
+  - 排队短
+  - 适合拍照
+  atmosphere_tags:
+  - 文艺小资
+  - 安静
+  recommendation_reason_seed: 巨鹿路上最出片的咖啡店，巴斯克蛋糕上海前三
+- id: rest_014
+  name: 汴京茶寮
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 汴京茶寮
+    address: 上海市黄浦区福州路390号
+    coordinates:
+      lat: 31.233
+      lng: 121.478
+    district: 人民广场商圈
+  distance_km: 0.8
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 45
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 日式庭院风茶馆，招牌抹茶拿铁和铜锣烧，适合闺蜜小聚
+  signature_dishes:
+  - 抹茶拿铁
+  - 铜锣烧
+  - 抹茶千层
+  tags:
+  - 日式茶馆
+  - 抹茶控
+  - 人民广场
+  - 下午茶
+  - 日系
+  poi_category: 美食.咖啡/茶馆/甜品
+  risk_tags:
+  - 排队一般
+  - 甜品偏甜
+  atmosphere_tags:
+  - 日式禅意
+  - 温馨
+  recommendation_reason_seed: 人民广场闹中取静的日式茶馆，抹茶系列一绝
+- id: rest_015
+  name: 柴爿巷
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 柴爿巷
+    address: 上海市黄浦区淮海东路45号
+    coordinates:
+      lat: 31.226
+      lng: 121.485
+    district: 人民广场商圈
+  distance_km: 2.1
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 38
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 老上海石库门风格甜品店，手工冰粉和酒酿圆子超地道，夏天必吃
+  signature_dishes:
+  - 红糖冰粉
+  - 酒酿圆子
+  - 绿豆汤
+  tags:
+  - 老上海
+  - 冰粉
+  - 石库门
+  - 弄堂美食
+  - 平价
+  poi_category: 美食.咖啡/茶馆/甜品
+  risk_tags:
+  - 位置隐蔽
+  - 座位少
+  atmosphere_tags:
+  - 怀旧
+  - 市井
+  recommendation_reason_seed: 藏在石库门里的老上海味道，冰粉夏天排队也要吃
+- id: rest_016
+  name: 绿野轻食
+  type: light_meal
+  cuisine_type: 轻食/健康餐
+  location:
+    name: 绿野轻食
+    address: 上海市浦东新区陆家嘴环路123号
+    coordinates:
+      lat: 31.241
+      lng: 121.503
+    district: 陆家嘴滨江
+  distance_km: 0.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 68
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: false
+  description: 陆家嘴白领的轻食天堂，主打有机蔬菜碗和藜麦沙拉，牛油果三明治是必点。
+  signature_dishes:
+  - 牛油果三明治
+  - 藜麦鸡肉沙拉
+  - 奇亚籽酸奶碗
+  tags:
+  - 轻食
+  - 健康餐
+  - 沙拉
+  - 白领午餐
+  - 有机
+  poi_category: 美食.轻食/健康餐
+  risk_tags: []
+  atmosphere_tags:
+  - 清新
+  - 简约
+  - 安静
+  recommendation_reason_seed: 陆家嘴性价比最高的健康轻食，食材新鲜，适合减脂期。
+- id: rest_017
+  name: 麦田素语
+  type: light_meal
+  cuisine_type: 轻食/健康餐
+  location:
+    name: 麦田素语
+    address: 上海市浦东新区滨江大道456号
+    coordinates:
+      lat: 31.245
+      lng: 121.507
+    district: 陆家嘴滨江
+  distance_km: 1.2
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 95
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 滨江景观素食餐厅，创意料理颜值高，黑松露炒饭和甜菜根拿铁人气爆棚。
+  signature_dishes:
+  - 黑松露炒饭
+  - 甜菜根拿铁
+  - 紫薯燕麦碗
+  tags:
+  - 素食
+  - 健康餐
+  - 景观餐厅
+  - 创意料理
+  - 轻食
+  poi_category: 美食.轻食/健康餐
+  risk_tags: []
+  atmosphere_tags:
+  - 文艺
+  - 浪漫
+  - 江景
+  recommendation_reason_seed: 边看江景边吃健康素食，拍照打卡超出片。
+- id: rest_018
+  name: 红盔甲·小龙虾烧烤夜宵
+  type: street_food
+  cuisine_type: 小吃/夜宵
+  location:
+    name: 红盔甲·小龙虾烧烤夜宵
+    address: 上海市闵行区申长路888号虹桥天地B1层
+    coordinates:
+      lat: 31.208
+      lng: 121.378
+    district: 虹桥天地周边
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: true
+  need_booking: true
+  description: 上海小龙虾界扛把子，推荐冰镇龙虾和秘制十三香，夜宵时段人气爆棚。
+  signature_dishes:
+  - 冰镇小龙虾
+  - 秘制十三香龙虾
+  - 蒜蓉烤生蚝
+  tags:
+  - 小龙虾
+  - 夜宵
+  - 烧烤
+  - 虹桥天地
+  - 排队王
+  poi_category: 美食.小吃/夜宵
+  risk_tags:
+  - 排队久
+  - 价格较高
+  atmosphere_tags:
+  - 热闹
+  - 接地气
+  recommendation_reason_seed: 上海夜宵必吃榜，小龙虾新鲜个大，适合朋友聚会。
+- id: rest_019
+  name: 平成屋·日式串烧居酒屋
+  type: street_food
+  cuisine_type: 小吃/夜宵
+  location:
+    name: 平成屋·日式串烧居酒屋
+    address: 上海市闵行区申滨南路999号龙湖天街B1层
+    coordinates:
+      lat: 31.202
+      lng: 121.372
+    district: 虹桥天地周边
+  distance_km: 0.8
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 30
+  reservation_available: false
+  need_booking: false
+  description: 日式居酒屋氛围，烤串和梅酒是招牌，深夜食堂即视感。
+  signature_dishes:
+  - 烤鸡肉串
+  - 烤牛舌
+  - 梅酒
+  - 日式炒乌冬
+  tags:
+  - 日式
+  - 串烧
+  - 居酒屋
+  - 夜宵
+  - 虹桥
+  poi_category: 美食.小吃/夜宵
+  risk_tags:
+  - 排队中等
+  atmosphere_tags:
+  - 温馨
+  - 日式
+  recommendation_reason_seed: 正宗日式串烧，下班后小酌一杯的好去处。
+- id: rest_020
+  name: 泰廊
+  type: exotic
+  cuisine_type: 东南亚
+  location:
+    name: 泰廊
+    address: 上海市虹口区东大名路501号北外滩来福士3楼
+    coordinates:
+      lat: 31.254
+      lng: 121.498
+    district: 北外滩滨水区
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 180
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: true
+  description: 正宗泰国菜，冬阴功汤浓郁，咖喱蟹必点，环境优雅适合聚餐。
+  signature_dishes:
+  - 冬阴功汤
+  - 咖喱蟹
+  - 芒果糯米饭
+  - 泰式奶茶
+  tags:
+  - 泰国菜
+  - 北外滩
+  - 聚餐
+  - 咖喱
+  - 网红
+  poi_category: 美食.东南亚/韩料/特色菜
+  risk_tags: []
+  atmosphere_tags:
+  - 优雅
+  - 热闹
+  recommendation_reason_seed: 北外滩正宗泰式风味，咖喱蟹一绝。
+- id: rest_021
+  name: 姜虎东白丁烤肉
+  type: exotic
+  cuisine_type: 韩料
+  location:
+    name: 姜虎东白丁烤肉
+    address: 上海市虹口区公平路18号北外滩来福士B1
+    coordinates:
+      lat: 31.253
+      lng: 121.496
+    district: 北外滩滨水区
+  distance_km: 1.0
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 韩式烤肉人气店，厚切五花肉配烧酒，小菜无限续，氛围热闹。
+  signature_dishes:
+  - 厚切五花肉
+  - 调味牛排
+  - 回忆盒饭
+  - 大酱汤
+  tags:
+  - 韩式烤肉
+  - 北外滩
+  - 排队王
+  - 五花肉
+  - 小菜
+  poi_category: 美食.东南亚/韩料/特色菜
+  risk_tags: []
+  atmosphere_tags:
+  - 热闹
+  - 烟火气
+  recommendation_reason_seed: 北外滩韩式烤肉顶流，五花肉配烧酒绝配。
+- id: rest_022
+  name: 蟹尊苑
+  type: exotic
+  cuisine_type: 特色菜
+  location:
+    name: 蟹尊苑
+    address: 上海市虹口区东长治路588号北外滩来福士5楼
+    coordinates:
+      lat: 31.255
+      lng: 121.497
+    district: 北外滩滨水区
+  distance_km: 1.3
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 300
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 上海蟹宴名店，蟹粉拌面鲜掉眉毛，蟹黄小笼包一绝，适合宴请。
+  signature_dishes:
+  - 蟹粉拌面
+  - 蟹黄小笼包
+  - 醉蟹
+  - 蟹粉豆腐
+  tags:
+  - 蟹宴
+  - 北外滩
+  - 高档
+  - 上海特色
+  - 宴请
+  poi_category: 美食.东南亚/韩料/特色菜
+  risk_tags: []
+  atmosphere_tags:
+  - 精致
+  - 商务
+  recommendation_reason_seed: 北外滩品蟹首选，蟹粉拌面鲜香浓郁。

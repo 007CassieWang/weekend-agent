@@ -1,0 +1,320 @@
+cases:
+  - case_id: solo_quiet_2h
+    input: "一个人周日下午找个安静地方待两小时"
+    expected_companion_context: ["solo"]
+    expected_primary_intent: "time_killing"
+    expected_context_modifiers: ["quiet"]
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "安静、低打扰、可短暂停留的咖啡馆/书店/展览，不推荐亲子、家庭、减脂方案"
+
+  - case_id: rainy_friends_low_budget
+    input: "下雨天和朋友出去，不想太累，预算人均100"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["rainy_day", "low_energy", "low_budget"]
+    expected_hard_constraints: ["budget_cap"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "室内、低体力、低预算、适合朋友聊天或轻娱乐"
+
+  - case_id: spouse_child
+    input: "周末想带老婆孩子出去玩，孩子几岁我还没想好"
+    expected_companion_context: ["family_with_children"]
+    expected_primary_intent: "parent_child"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["child_safety", "time_window"]
+    expected_should_ask: ["child_age_optional", "location"]
+    expected_should_not_assume: ["pet", "diet_goal", "elderly"]
+    expected_recommendation_style: "亲子安全优先，标注儿童年龄可选追问，不能当成单纯情侣约会"
+
+  - case_id: couple_date
+    input: "和女朋友今晚约会，想找个有氛围的西餐或展览"
+    expected_companion_context: ["couple"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "pet", "diet_goal"]
+    expected_recommendation_style: "情侣约会氛围、餐厅和展览组合，提示预约风险"
+
+  - case_id: elderly_no_accessibility
+    input: "周六带爸妈出去吃饭走走，别太吵，少走路"
+    expected_companion_context: ["family_with_elderly"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["quiet", "low_walking"]
+    expected_hard_constraints: ["elder_mobility", "time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "pet", "diet_goal", "accessibility_need"]
+    expected_recommendation_style: "低噪声、少步行、可停车/落客，但不默认强制无障碍"
+
+  - case_id: elderly_wheelchair
+    input: "带坐轮椅的老人去附近商场吃饭，最好无障碍"
+    expected_companion_context: ["family_with_elderly"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["low_walking"]
+    expected_hard_constraints: ["elder_mobility", "accessibility", "max_distance"]
+    expected_should_ask: []
+    expected_should_not_assume: ["children", "pet", "diet_goal"]
+    expected_recommendation_style: "明确无障碍、电梯、少步行和落客点"
+
+  - case_id: pet_cafe
+    input: "想带狗狗去喝咖啡，最好能坐一下午"
+    expected_companion_context: ["pet"]
+    expected_primary_intent: "cafe_tea"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["pet_allowed", "time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "diet_goal"]
+    expected_recommendation_style: "只推荐明确可带宠咖啡馆，并提示宠物限制"
+
+  - case_id: rainy_parent_child
+    input: "下雨了，想带小孩找个室内亲子活动"
+    expected_companion_context: ["family_with_children"]
+    expected_primary_intent: "parent_child"
+    expected_context_modifiers: ["rainy_day"]
+    expected_hard_constraints: ["child_safety"]
+    expected_should_ask: ["child_age_optional", "location"]
+    expected_should_not_assume: ["spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "室内亲子、儿童安全、年龄适配"
+
+  - case_id: low_budget_solo_meal
+    input: "我自己随便吃个便宜点的晚饭，不想排队"
+    expected_companion_context: ["solo"]
+    expected_primary_intent: "meal"
+    expected_context_modifiers: ["low_budget", "queue_sensitive"]
+    expected_hard_constraints: []
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "低预算、少排队、适合单人快吃"
+
+  - case_id: friends_nightlife
+    input: "晚上和朋友想去Livehouse或者夜宵，热闹点"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["lively"]
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "夜间朋友社交，提示噪声、排队和返程"
+
+  - case_id: short_time_cafe
+    input: "公司附近只有2小时空档，想喝杯咖啡打发时间"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["max_distance", "time_window"]
+    expected_should_ask: ["people_count"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "短时间、近距离、咖啡或轻活动"
+
+  - case_id: half_day_mixed
+    input: "周日半天，想先看展再吃饭，路线顺一点"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location", "people_count"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "展览+餐饮组合，动线顺、时间可执行"
+
+  - case_id: low_energy_massage
+    input: "今天很累，想找个按摩或者洗浴放松一下"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "wellness_relax"
+    expected_context_modifiers: []
+    expected_hard_constraints: []
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "放松疗愈，低决策成本，提示预约和服务质量"
+
+  - case_id: photo_spot_couple
+    input: "和对象找个适合拍照打卡的地方，下午去"
+    expected_companion_context: ["couple"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["photo_spot"]
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "pet", "diet_goal"]
+    expected_recommendation_style: "出片、氛围和路线，适合情侣"
+
+  - case_id: no_reservation_friends
+    input: "朋友临时约，不想预约，找个说走就走的活动"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["no_reservation"]
+    expected_hard_constraints: []
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "免预约、低排队风险、适合朋友"
+
+  - case_id: driving_parking
+    input: "开车带家人去吃粤菜，最好好停车"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "meal"
+    expected_context_modifiers: ["parking_needed"]
+    expected_hard_constraints: []
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "pet", "diet_goal"]
+    expected_recommendation_style: "餐厅、停车便利、家庭成员不脑补为孩子或老人"
+
+  - case_id: subway_museum
+    input: "想坐地铁去博物馆，别太贵"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "culture_experience"
+    expected_context_modifiers: ["near_subway", "low_budget"]
+    expected_hard_constraints: []
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "地铁可达、低预算、博物馆预约和闭馆提示"
+
+  - case_id: short_trip_friends
+    input: "周末和朋友想周边游半天，拍照好看一点"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "short_trip"
+    expected_context_modifiers: ["photo_spot"]
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "半日周边游、拍照点和交通时间"
+
+  - case_id: meal_only_hotpot
+    input: "今晚只想吃火锅，四个人，人均200以内"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "meal"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["budget_cap", "time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "只给餐厅方案，不强行加活动"
+
+  - case_id: activity_only_escape_room
+    input: "只想找个密室玩，不吃饭，和同学一起"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "indoor_entertainment"
+    expected_context_modifiers: []
+    expected_hard_constraints: []
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "只给活动，提示预约、恐怖程度和时长"
+
+  - case_id: meal_plus_board_game
+    input: "吃饭加桌游，适合朋友聊天，预算别太高"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["low_budget"]
+    expected_hard_constraints: []
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "餐饮+桌游组合，朋友社交和预算"
+
+  - case_id: allergy_safe
+    input: "朋友海鲜过敏，想找家不踩雷的餐厅"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "meal"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["allergy_safe"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "过敏原安全优先，明确避开海鲜交叉污染"
+
+  - case_id: explicit_diet
+    input: "最近减脂，想吃低卡健康餐，再散步一会"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: []
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet"]
+    expected_recommendation_style: "只有明确减脂时才启用健康饮食偏好"
+
+  - case_id: mall_rain_elder
+    input: "下雨，带父母去商场逛逛吃饭，少折腾"
+    expected_companion_context: ["family_with_elderly"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: ["rainy_day", "low_walking"]
+    expected_hard_constraints: ["elder_mobility"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "pet", "diet_goal", "accessibility_need"]
+    expected_recommendation_style: "商场综合体、少步行、低噪声、停车/落客"
+
+  - case_id: colleagues_team
+    input: "部门同事周五晚上聚一下，KTV或者烧烤都行"
+    expected_companion_context: ["colleagues"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "同事多人、包间/容量、预算和夜间返程"
+
+  - case_id: hot_weather_mall
+    input: "太热了，不想晒，找个商场里能待半天的安排"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "shopping_mall"
+    expected_context_modifiers: ["hot_weather"]
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "室内商场综合体，餐饮+轻娱乐"
+
+  - case_id: cold_weather_onsen
+    input: "降温了，想去温泉或者洗浴放松"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "wellness_relax"
+    expected_context_modifiers: ["cold_weather"]
+    expected_hard_constraints: []
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "温泉/洗浴、交通时长、预约和健康禁忌提示"
+
+  - case_id: lively_friends_games
+    input: "几个朋友想玩电玩城，热闹一点，不用太贵"
+    expected_companion_context: ["friends"]
+    expected_primary_intent: "indoor_entertainment"
+    expected_context_modifiers: ["lively", "low_budget"]
+    expected_hard_constraints: []
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "室内娱乐、朋友社交、预算"
+
+  - case_id: quiet_bookstore
+    input: "想找个清静书店坐坐，离家近一点"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "wellness_relax"
+    expected_context_modifiers: ["quiet"]
+    expected_hard_constraints: ["max_distance"]
+    expected_should_ask: ["people_count"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "安静书店/咖啡，近距离，低打扰"
+
+  - case_id: parent_child_age
+    input: "带6岁孩子去科技馆，周日上午"
+    expected_companion_context: ["family_with_children"]
+    expected_primary_intent: "parent_child"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["child_safety", "time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "儿童年龄已知，科技馆预约、排队和安全"
+
+  - case_id: pet_false_regression
+    input: "周末一个人出去走走，不带宠物"
+    expected_companion_context: ["solo"]
+    expected_primary_intent: "outdoor_walk"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+    expected_recommendation_style: "不能因为 pet 字段存在或否定句触发宠物友好"
+
+  - case_id: no_family_default
+    input: "明天下午有空，帮我安排一下"
+    expected_companion_context: ["unknown"]
+    expected_primary_intent: "mixed_plan"
+    expected_context_modifiers: []
+    expected_hard_constraints: ["time_window"]
+    expected_should_ask: ["people_count", "location"]
+    expected_should_not_assume: ["children", "spouse", "pet", "diet_goal", "elderly"]
+    expected_recommendation_style: "中性默认，不脑补家庭、孩子、减脂"

@@ -1,0 +1,1188 @@
+"""
+Agent Harness - 周末闲时活动规划 Agent 主流程
+负责状态管理、工具调度、异常处理和执行动作
+"""
+
+import yaml
+import uuid
+from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime, timedelta
+from dataclasses import replace
+
+from schemas import (
+    UserRequest, Activity, Restaurant, RouteInfo,
+    CandidatePlan, TimelineItem, ExecutionResult,
+    BookingResult, OrderResult, MessageResult,
+    AgentState, Location, ScoreBreakdown,
+    CompanionsType, BudgetLevel
+)
+from tools import (
+    get_user_context, search_activities, search_restaurants,
+    check_route_time, check_availability, book_activity,
+    book_restaurant, order_item, send_plan
+)
+from prompts import parse_request, get_recommendation_reason
+from scoring import score_plans, calculate_plan_score
+
+
+class WeekendActivityAgent:
+    """周末闲时活动规划 Agent"""
+
+    def __init__(self):
+        self.state = AgentState()
+        self.product_rules = self._load_product_rules()
+
+    def _load_product_rules(self) -> Dict[str, Any]:
+        """加载产品规则配置"""
+        try:
+            with open("config/product_rules.yaml", "r", encoding="utf-8") as f:
+                return yaml.safe_load(f)
+        except Exception as e:
+            # 返回默认配置
+            return {
+                "defaults": {
+                    "start_time": "14:00",
+                    "duration_hours": 4,
+                    "max_drive_minutes": 30,
+                    "budget_level": "medium",
+                    "companions": "unknown",
+                    "child_age": None,
+                    "diet_goal": "none"
+                },
+                "execution_level": {
+                    "require_user_confirmation_before_booking": True,
+                    "allow_mock_booking": True,
+                    "allow_mock_order": True,
+                    "allow_mock_send_message": True
+                },
+                "failure_fallbacks": {
+                    "restaurant_unavailable": "选择同商圈、同价位的备选餐厅",
+                    "activity_unavailable": "优先替换为无需预约的 citywalk、公园或商场综合体",
+                    "route_too_far": "重新搜索 30 分钟车程内的活动和餐厅",
+                }
+            }
+
+    def _log(self, step: str, message: str, details: Optional[Dict] = None):
+        """记录执行日志"""
+        self.state.add_log(step, message, details)
+        print(f"[{step}] {message}")
+
+    # ==================== Step 1: 解析请求 ====================
+
+    def parse_request(self, user_input: str) -> UserRequest:
+        """
+        解析用户自然语言请求
+
+        Args:
+            user_input: 用户输入的自然语言
+
+        Returns:
+            结构化的用户请求
+        """
+        self._log("parse_request", f"正在解析用户请求: {user_input[:50]}...")
+
+        # 使用统一入口解析（优先 LLM，fallback mock）
+        parsed_data = parse_request(user_input)
+
+        # 记录解析器来源
+        parser_info = parsed_data.get("parser", "unknown")
+        parse_error = parsed_data.get("parse_error")
+        if parse_error:
+            self._log("parse_request", f"LLM 解析失败，已 fallback 到 mock: {parse_error}")
+        else:
+            self._log("parse_request", f"使用解析器: {parser_info}")
+
+        # 置信度检查（仅 LLM 解析时有此字段）
+        confidence = parsed_data.get("confidence")
+        if confidence is not None:
+            threshold = self.product_rules.get("scenario_detection", {}).get("confidence_threshold", 0.55)
+            if confidence < threshold:
+                self._log("parse_request", f"LLM 置信度较低 ({confidence:.2f} < {threshold})，结果可能不准确")
+
+        # 将字符串转换为枚举类型
+        companions_str = parsed_data.get("companions")
+        companions_enum = None
+        if companions_str:
+            try:
+                companions_enum = CompanionsType(companions_str)
+            except ValueError:
+                companions_enum = None
+
+        budget_str = parsed_data.get("budget_level")
+        budget_enum = None
+        if budget_str:
+            try:
+                budget_enum = BudgetLevel(budget_str)
+            except ValueError:
+                budget_enum = None
+
+        # 创建 UserRequest 对象
+        request = UserRequest(
+            raw_text=user_input,
+            time_window=parsed_data.get("time_window"),
+            start_time=parsed_data.get("start_time"),
+            duration_hours=parsed_data.get("duration_hours"),
+            location=parsed_data.get("location"),
+            people_count=parsed_data.get("people_count"),
+            companions=companions_enum,
+            child_age=parsed_data.get("child_age"),
+            has_child=parsed_data.get("has_child", False),
+            has_elderly=parsed_data.get("has_elderly", False),
+            distance_preference=parsed_data.get("distance_preference"),
+            budget_level=budget_enum,
+            activity_preference=parsed_data.get("activity_preference"),
+            food_preference=parsed_data.get("food_preference"),
+            diet_goal=parsed_data.get("diet_goal", "none"),
+            scenario_type=parsed_data.get("scenario_type", "general_leisure"),
+            activated_constraints=parsed_data.get("activated_constraints", []),
+            scoring_profile=parsed_data.get("scoring_profile", "general"),
+            scenario_labels=parsed_data.get("scenario_labels", {}),
+            companion_context=parsed_data.get("companion_context", []),
+            relation_context=parsed_data.get("relation_context", []),
+            primary_intent=parsed_data.get("primary_intent"),
+            context_modifiers=parsed_data.get("context_modifiers", []),
+            hard_constraints=parsed_data.get("hard_constraints", []),
+            soft_preferences=parsed_data.get("soft_preferences", []),
+            should_ask=parsed_data.get("should_ask", []),
+            should_not_assume=parsed_data.get("should_not_assume", []),
+            execution_intent=parsed_data.get("execution_intent"),
+            parsed_at=datetime.now(),
+            missing_slots=parsed_data.get("missing_slots", [])
+        )
+
+        self.state.user_request = request
+        self._log(
+            "parse_request",
+            f"解析完成: {request.people_count}人, 时长{request.duration_hours}小时, "
+            f"同伴类型: {request.companions}, 场景: {request.scenario_type}",
+            request.to_dict()
+        )
+
+        return request
+
+    # ==================== Step 2: 补全缺失信息 ====================
+
+    def complete_missing_slots(self, request: UserRequest) -> UserRequest:
+        """
+        根据产品规则补全缺失信息
+
+        Args:
+            request: 用户请求
+
+        Returns:
+            补全后的用户请求
+        """
+        self._log("complete_missing_slots", "正在补全缺失信息...")
+
+        defaults = self.product_rules.get("defaults", {})
+        clarification = self.product_rules.get("clarification_rules", {})
+        default_when_missing = clarification.get("default_when_missing", {})
+
+        # 补全各个字段
+        if not request.start_time:
+            request.start_time = default_when_missing.get("exact_start_time", defaults.get("start_time", "14:00"))
+            self._log("complete_missing_slots", f"使用默认开始时间: {request.start_time}")
+
+        if not request.duration_hours:
+            request.duration_hours = default_when_missing.get("duration_hours", defaults.get("duration_hours", 4))
+            self._log("complete_missing_slots", f"使用默认时长: {request.duration_hours}小时")
+
+        if not request.budget_level:
+            budget_str = default_when_missing.get("budget_level", defaults.get("budget_level", "medium"))
+            try:
+                request.budget_level = BudgetLevel(budget_str)
+            except ValueError:
+                request.budget_level = BudgetLevel.MEDIUM
+
+        if not request.location:
+            request.location = defaults.get("default_location", "mock_home_location")
+            # 获取用户上下文中的位置信息
+            user_context = get_user_context()
+            request.from_location = user_context.get("home_location")
+
+        if not request.people_count:
+            default_people_count = default_when_missing.get("people_count", defaults.get("people_count"))
+            if default_people_count:
+                request.people_count = default_people_count
+
+        if not request.companions:
+            companions_str = default_when_missing.get("companions", defaults.get("companions"))
+            if companions_str and companions_str != "unknown":
+                try:
+                    request.companions = CompanionsType(companions_str)
+                except ValueError:
+                    request.companions = None
+
+        if not request.distance_preference:
+            request.distance_preference = "nearby"
+
+        self._log("complete_missing_slots", "信息补全完成", request.to_dict())
+
+        return request
+
+    # ==================== Step 3: 搜索活动 ====================
+
+    def search_activities(self, request: UserRequest) -> List[Activity]:
+        """
+        搜索附近适合的活动
+
+        Args:
+            request: 用户请求
+
+        Returns:
+            活动列表
+        """
+        self._log("search_activities", "正在搜索附近活动...")
+
+        max_drive = self.product_rules.get("defaults", {}).get("max_drive_minutes", 30)
+
+        activities = search_activities(
+            location=request.location or "home",
+            child_age=request.child_age if request.has_child else None,
+            duration_hours=request.duration_hours or self.product_rules.get("defaults", {}).get("duration_hours", 4),
+            max_drive_minutes=max_drive,
+            preferences={
+                "activity_style": request.activity_preference,
+                "budget": request.budget_level
+            }
+        )
+        activities = self._sort_supply_by_scenario(
+            self._filter_supply_by_scenario(activities, request),
+            request,
+        )
+
+        self.state.found_activities = activities
+        self._log("search_activities", f"找到 {len(activities)} 个符合条件的活动")
+
+        return activities
+
+    # ==================== Step 4: 搜索餐厅 ====================
+
+    def search_restaurants(self, request: UserRequest) -> List[Restaurant]:
+        """
+        搜索适合的餐厅
+
+        Args:
+            request: 用户请求
+
+        Returns:
+            餐厅列表
+        """
+        self._log("search_restaurants", "正在搜索餐厅...")
+
+        max_drive = self.product_rules.get("defaults", {}).get("max_drive_minutes", 30)
+
+        restaurants = search_restaurants(
+            location=request.location or "home",
+            people_count=request.people_count or 1,
+            diet_friendly=request.scenario_type == "health_diet" or request.diet_goal != "none",
+            child_friendly=request.has_child,
+            group_friendly=bool(request.people_count and request.people_count > 2),
+            max_drive_minutes=max_drive
+        )
+        restaurants = self._sort_supply_by_scenario(
+            self._filter_supply_by_scenario(restaurants, request),
+            request,
+        )
+
+        self.state.found_restaurants = restaurants
+        self._log("search_restaurants", f"找到 {len(restaurants)} 家符合条件的餐厅")
+
+        return restaurants
+
+    def _filter_supply_by_scenario(self, items: List[Any], request: UserRequest) -> List[Any]:
+        """过滤明显不匹配当前场景的供给，避免非亲子场景返回亲子主题结果。"""
+        if request.has_child or request.scenario_type == "family_with_children":
+            return items
+
+        child_theme_terms = ["亲子", "儿童乐园", "宝宝", "童话", "游乐区", "儿童餐"]
+        family_theme_terms = ["家庭餐厅", "家庭路", "儿童娱乐区", "儿童套餐"]
+        filtered = []
+        for item in items:
+            text_parts = [
+                getattr(item, "name", ""),
+                getattr(item, "type", ""),
+                getattr(item, "cuisine_type", ""),
+                " ".join(getattr(item, "signature_dishes", []) or []),
+            ]
+            if isinstance(item, Restaurant):
+                text_parts.extend([
+                    getattr(item, "description", ""),
+                    " ".join(getattr(item, "tags", []) or []),
+                ])
+            text = " ".join(text_parts)
+            if any(term in text for term in child_theme_terms + family_theme_terms):
+                continue
+            filtered.append(item)
+
+        return filtered or items
+
+    def _sort_supply_by_scenario(self, items: List[Any], request: UserRequest) -> List[Any]:
+        """按当前场景重排供给，候选构建阶段会优先取更匹配的前几项。"""
+        if not items:
+            return items
+
+        scenario_preferences = {
+            "elderly_friendly": {
+                "restaurants": ["cantonese", "chinese", "japanese", "light_meal", "粤菜", "中餐", "日料"],
+                "activities": ["botanical_garden", "park", "citywalk", "cafe", "art_exhibition", "museum"],
+                "avoid": ["hotpot", "bbq", "korean", "livehouse", "hiking", "sports", "火锅", "烧烤", "韩料"],
+            },
+            "couple_date": {
+                "restaurants": ["japanese", "cantonese", "thai", "western", "日料", "粤菜", "泰式", "西餐"],
+                "activities": ["cafe", "citywalk", "art_exhibition", "botanical_garden", "onsen"],
+                "avoid": ["food_court", "board_game", "ktv", "hotpot", "综合"],
+            },
+            "solo_relax": {
+                "restaurants": ["cafe", "japanese", "light_meal", "日料", "轻食"],
+                "activities": ["cafe", "citywalk", "park", "art_exhibition", "museum"],
+                "avoid": ["ktv", "hotpot", "bbq"],
+            },
+        }
+        prefs = scenario_preferences.get(request.scenario_type)
+
+        modifiers = set(request.context_modifiers or [])
+        hard_constraints = set(request.hard_constraints or [])
+
+        def rank(item: Any) -> tuple:
+            item_type = getattr(item, "type", "")
+            cuisine = getattr(item, "cuisine_type", "")
+            name = getattr(item, "name", "")
+            tags = " ".join(getattr(item, "tags", []) or [])
+            category = getattr(item, "poi_category", "")
+            risks = getattr(item, "risk_tags", []) or []
+            text = " ".join([item_type, cuisine, name, tags, category, " ".join(risks)])
+            preferred = []
+            avoid = []
+            if prefs:
+                preferred = prefs["restaurants"] if isinstance(item, Restaurant) else prefs["activities"]
+                avoid = prefs.get("avoid", [])
+            avoid_penalty = 100 if any(term in text for term in avoid) else 0
+            preferred_rank = 0 if any(term in text for term in preferred) else 20
+            label_penalty = 0
+            label_bonus = 0
+
+            if "rainy_day" in modifiers and getattr(item, "indoor_outdoor", "") == "outdoor":
+                label_penalty += 45
+            if "low_energy" in modifiers or "low_walking" in modifiers or "elder_mobility" in hard_constraints:
+                walking_load = getattr(item, "walking_load", "")
+                if walking_load == "high":
+                    label_penalty += 45
+                elif walking_load == "medium":
+                    label_penalty += 18
+                elif walking_load == "low":
+                    label_bonus += 15
+            if "quiet" in modifiers and getattr(item, "noise_level", "") == "high":
+                label_penalty += 35
+            if "pet_allowed" in hard_constraints:
+                if getattr(item, "pet_friendly", False):
+                    label_bonus += 40
+                else:
+                    label_penalty += 70
+            if "no_reservation" in modifiers and getattr(item, "need_booking", False):
+                label_penalty += 40
+            if "queue_sensitive" in modifiers and (
+                getattr(item, "queue_minutes", 0) > 10 or "排队" in risks
+            ):
+                label_penalty += 35
+            if "low_budget" in modifiers or "budget_cap" in hard_constraints:
+                price = float(getattr(item, "price_per_person", 0) or 0)
+                if isinstance(item, Restaurant):
+                    if price > 120:
+                        label_penalty += 35
+                    elif price <= 90:
+                        label_bonus += 15
+                else:
+                    if price > 120:
+                        label_penalty += 30
+                    elif price <= 80:
+                        label_bonus += 12
+            if "photo_spot" in modifiers and getattr(item, "photo_spot", False):
+                label_bonus += 20
+            if "near_subway" in modifiers and getattr(item, "near_subway", False):
+                label_bonus += 18
+            if "parking_needed" in modifiers and getattr(item, "parking_available", False):
+                label_bonus += 18
+
+            return (
+                avoid_penalty + preferred_rank + label_penalty - label_bonus,
+                getattr(item, "distance_km", 999),
+            )
+
+        return sorted(items, key=rank)
+
+    # ==================== Step 5: 检查路线 ====================
+
+    def check_route_time(
+        self,
+        from_loc: Location,
+        to_loc: Location
+    ) -> RouteInfo:
+        """
+        检查路线时间
+
+        Args:
+            from_loc: 起点
+            to_loc: 终点
+
+        Returns:
+            路线信息
+        """
+        return check_route_time(from_loc, to_loc, "driving")
+
+    # ==================== Step 6: 构建候选方案 ====================
+
+    def build_candidate_plans(
+        self,
+        request: UserRequest,
+        activities: List[Activity],
+        restaurants: List[Restaurant]
+    ) -> List[CandidatePlan]:
+        """
+        构建候选方案
+
+        Args:
+            request: 用户请求
+            activities: 活动列表
+            restaurants: 餐厅列表
+
+        Returns:
+            候选方案列表
+        """
+        self._log("build_candidate_plans", "正在构建候选方案...")
+
+        plans = []
+
+        # 如果没有找到足够的活动或餐厅，使用备选
+        if len(activities) < 2:
+            self._log("build_candidate_plans", "活动数量不足，添加备选活动")
+            activities = activities + self._get_fallback_activities()
+
+        if len(restaurants) < 2:
+            self._log("build_candidate_plans", "餐厅数量不足，添加备选餐厅")
+            restaurants = restaurants + self._get_fallback_restaurants()
+
+        # 获取用户位置
+        home_location = request.from_location or get_user_context().get("home_location")
+
+        # 组合方案 1: 活动 + 餐厅
+        if activities and restaurants:
+            for i, activity in enumerate(activities[:3]):  # 取前3个活动
+                for j, restaurant in enumerate(restaurants[:2]):  # 每个活动配2个餐厅
+                    plan_id = f"plan_{i}_{j}"
+                    plan = self._build_single_plan(
+                        plan_id,
+                        request,
+                        [activity],
+                        restaurant,
+                        home_location
+                    )
+                    if plan:
+                        plans.append(plan)
+
+        # 组合方案 2: 两个活动 + 餐厅（如果时间允许）
+        if len(activities) >= 2 and request.duration_hours and request.duration_hours >= 5:
+            for i in range(min(2, len(activities) - 1)):
+                for j in range(min(2, len(restaurants))):
+                    plan_id = f"plan_combo_{i}_{j}"
+                    plan = self._build_single_plan(
+                        plan_id,
+                        request,
+                        activities[i:i+2],  # 两个活动
+                        restaurants[j],
+                        home_location
+                    )
+                    if plan:
+                        plans.append(plan)
+
+        # 去重
+        seen = set()
+        unique_plans = []
+        for plan in plans:
+            key = (tuple(a.id for a in plan.activities), plan.restaurant.id if plan.restaurant else None)
+            if key not in seen:
+                seen.add(key)
+                unique_plans.append(plan)
+
+        self.state.candidate_plans = unique_plans[:5]  # 最多5个方案
+        self._log("build_candidate_plans", f"成功构建 {len(self.state.candidate_plans)} 个候选方案")
+
+        return self.state.candidate_plans
+
+    def _build_single_plan(
+        self,
+        plan_id: str,
+        request: UserRequest,
+        activities: List[Activity],
+        restaurant: Restaurant,
+        home_location: Location
+    ) -> Optional[CandidatePlan]:
+        """构建单个方案的时间线"""
+
+        try:
+            timeline = []
+            route_infos = []
+
+            # 解析开始时间
+            start_time = datetime.strptime(request.start_time or "14:00", "%H:%M")
+            current_time = start_time
+
+            # 1. 从家出发
+            timeline.append(TimelineItem(
+                start_time=current_time.strftime("%H:%M"),
+                end_time=current_time.strftime("%H:%M"),
+                activity="从家出发",
+                location=home_location.name,
+                type="departure",
+                description="准备出发"
+            ))
+
+            # 2. 第一个活动地点
+            if activities:
+                first_activity = activities[0]
+
+                # 计算路程
+                route = self.check_route_time(home_location, first_activity.location)
+                route_infos.append(route)
+
+                travel_end = current_time + timedelta(minutes=route.travel_minutes)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=travel_end.strftime("%H:%M"),
+                    activity=f"前往{first_activity.name}",
+                    location=f"途中",
+                    type="travel",
+                    description=f"车程约{route.travel_minutes}分钟"
+                ))
+
+                current_time = travel_end
+
+                # 活动进行
+                activity_end = current_time + timedelta(minutes=first_activity.suggested_duration_minutes)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=activity_end.strftime("%H:%M"),
+                    activity=first_activity.name,
+                    location=first_activity.location.name,
+                    type="activity",
+                    description=first_activity.description[:50] + "..."
+                ))
+
+                current_time = activity_end + timedelta(minutes=10)  # 缓冲时间
+
+            # 3. 第二个活动（如果有）
+            if len(activities) > 1:
+                second_activity = activities[1]
+
+                route = self.check_route_time(first_activity.location, second_activity.location)
+                route_infos.append(route)
+
+                travel_end = current_time + timedelta(minutes=route.travel_minutes)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=travel_end.strftime("%H:%M"),
+                    activity=f"前往{second_activity.name}",
+                    location=f"途中",
+                    type="travel",
+                    description=f"车程约{route.travel_minutes}分钟"
+                ))
+
+                current_time = travel_end
+
+                activity_end = current_time + timedelta(minutes=second_activity.suggested_duration_minutes)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=activity_end.strftime("%H:%M"),
+                    activity=second_activity.name,
+                    location=second_activity.location.name,
+                    type="activity",
+                    description=second_activity.description[:50] + "..."
+                ))
+
+                current_time = activity_end + timedelta(minutes=10)
+
+            # 4. 餐厅用餐
+            if restaurant:
+                last_location = activities[-1].location if activities else home_location
+                route = self.check_route_time(last_location, restaurant.location)
+                route_infos.append(route)
+
+                travel_end = current_time + timedelta(minutes=route.travel_minutes)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=travel_end.strftime("%H:%M"),
+                    activity=f"前往{restaurant.name}",
+                    location=f"途中",
+                    type="travel",
+                    description=f"车程约{route.travel_minutes}分钟"
+                ))
+
+                current_time = travel_end
+
+                # 用餐时长默认80分钟
+                meal_duration = 80
+                meal_end = current_time + timedelta(minutes=meal_duration)
+                timeline.append(TimelineItem(
+                    start_time=current_time.strftime("%H:%M"),
+                    end_time=meal_end.strftime("%H:%M"),
+                    activity=f"在{restaurant.name}用餐",
+                    location=restaurant.location.name,
+                    type="meal",
+                    description=f"{restaurant.cuisine_type}，人均¥{restaurant.price_per_person}"
+                ))
+
+                current_time = meal_end
+
+            # 5. 返程
+            route = self.check_route_time(restaurant.location if restaurant else last_location, home_location)
+            route_infos.append(route)
+
+            travel_end = current_time + timedelta(minutes=route.travel_minutes)
+            timeline.append(TimelineItem(
+                start_time=current_time.strftime("%H:%M"),
+                end_time=travel_end.strftime("%H:%M"),
+                activity="返程回家",
+                location=f"途中",
+                type="travel",
+                description=f"车程约{route.travel_minutes}分钟"
+            ))
+
+            # 计算总时长
+            total_duration = (travel_end - start_time).total_seconds() / 60
+
+            # 创建方案
+            plan = CandidatePlan(
+                plan_id=plan_id,
+                title=f"{' + '.join(a.name for a in activities)} + {restaurant.name}" if restaurant else f"{' + '.join(a.name for a in activities)}",
+                timeline=timeline,
+                total_duration_minutes=int(total_duration),
+                activities=activities,
+                restaurant=restaurant,
+                route_infos=route_infos,
+                score=0.0,
+                score_breakdown=ScoreBreakdown(),
+                risks=[],
+                recommendation_reason=""
+            )
+
+            return plan
+
+        except Exception as e:
+            self._log("build_single_plan", f"构建方案失败: {str(e)}")
+            return None
+
+    def _get_fallback_activities(self) -> List[Activity]:
+        """获取备选活动（当搜索不到足够活动时）"""
+        # 返回一些默认活动
+        fallback = [
+            Activity(
+                id="fallback_001",
+                name="公园休闲散步",
+                type="park",
+                location=Location(name="附近公园", address="社区公园"),
+                distance_km=2.0,
+                duration_minutes=60,
+                suggested_duration_minutes=60,
+                child_friendly=True,
+                price_per_person=0,
+                reservation_available=False,
+                need_booking=False,
+                description="家附近的公园，适合休闲散步"
+            ),
+            Activity(
+                id="fallback_002",
+                name="商场亲子区",
+                type="mall",
+                location=Location(name="附近商场", address="社区商场"),
+                distance_km=3.0,
+                duration_minutes=90,
+                suggested_duration_minutes=90,
+                child_friendly=True,
+                price_per_person=50,
+                reservation_available=False,
+                need_booking=False,
+                description="商场内的儿童游乐区"
+            )
+        ]
+        return fallback
+
+    def _get_fallback_restaurants(self) -> List[Restaurant]:
+        """获取备选餐厅（当搜索不到足够餐厅时）"""
+        return [
+            Restaurant(
+                id="fallback_rest_001",
+                name="社区家庭餐厅",
+                type="family",
+                cuisine_type="中餐",
+                location=Location(name="社区餐厅", address="社区中心"),
+                distance_km=2.5,
+                child_friendly=True,
+                diet_friendly=False,
+                group_friendly=True,
+                price_per_person=80,
+                reservation_available=False,
+                need_booking=False,
+                description="社区内的家庭餐厅，方便快捷"
+            )
+        ]
+
+    # ==================== Step 7: 评分 ====================
+
+    def score_plans(self, plans: List[CandidatePlan]) -> List[CandidatePlan]:
+        """
+        对候选方案进行评分
+
+        Args:
+            plans: 候选方案列表
+
+        Returns:
+            评分后的方案列表
+        """
+        self._log("score_plans", "正在对候选方案评分...")
+
+        defaults = self.product_rules.get("defaults", {})
+
+        scored_plans = score_plans(
+            plans,
+            target_duration_hours=self.state.user_request.duration_hours or defaults.get("duration_hours", 4),
+            max_drive_minutes=defaults.get("max_drive_minutes", 30),
+            companions=self.state.user_request.companions,
+            activity_preference=self.state.user_request.activity_preference,
+            scenario_type=self.state.user_request.scenario_type,
+            scoring_profile=self.state.user_request.scoring_profile,
+            scenario_labels=self.state.user_request.scenario_labels,
+            activated_constraints=self.state.user_request.activated_constraints,
+            has_child=self.state.user_request.has_child,
+            diet_goal=self.state.user_request.diet_goal,
+        )
+
+        for plan in scored_plans:
+            self._log(
+                "score_plans",
+                f"方案 {plan.plan_id}: {plan.score}分",
+                plan.score_breakdown.to_dict()
+            )
+
+        return scored_plans
+
+    # ==================== Step 8: 选择最优方案 ====================
+
+    def choose_best_plan(self, plans: List[CandidatePlan]) -> CandidatePlan:
+        """
+        选择最优方案
+
+        Args:
+            plans: 候选方案列表
+
+        Returns:
+            最优方案
+        """
+        self._log("choose_best_plan", "正在选择最优方案...")
+
+        if not plans:
+            raise ValueError("没有可用的候选方案")
+
+        # 按分数排序后的第一个就是最优方案
+        best_plan = plans[0]
+
+        # 生成推荐理由
+        has_diet_constraint = (
+            self.state.user_request.scenario_type == "health_diet"
+            or self.state.user_request.diet_goal != "none"
+        )
+        best_plan.recommendation_reason = get_recommendation_reason({
+            "activities": [{"child_friendly": a.child_friendly} for a in best_plan.activities] if self.state.user_request.has_child else [],
+            "restaurant": {"diet_friendly": best_plan.restaurant.diet_friendly if best_plan.restaurant and has_diet_constraint else False},
+            "score": best_plan.score
+        })
+
+        # 生成风险提示
+        risks = []
+        for activity in best_plan.activities:
+            if activity.need_booking and not activity.is_available:
+                risks.append(f"{activity.name} 可能需要提前预约")
+            if activity.queue_minutes > 15:
+                risks.append(f"{activity.name} 可能需要排队约{activity.queue_minutes}分钟")
+
+        if best_plan.restaurant:
+            if best_plan.restaurant.queue_minutes > 20:
+                risks.append(f"{best_plan.restaurant.name} 可能需要等位")
+
+        best_plan.risks = risks
+
+        self.state.selected_plan = best_plan
+        self._log(
+            "choose_best_plan",
+            f"已选择最优方案: {best_plan.title}, 得分: {best_plan.score}"
+        )
+
+        return best_plan
+
+    # ==================== Step 9: 执行方案 ====================
+
+    def execute_plan(
+        self,
+        plan: CandidatePlan,
+        user_confirmed: bool = True
+    ) -> ExecutionResult:
+        """
+        执行方案
+
+        Args:
+            plan: 要执行的方案
+            user_confirmed: 用户是否已确认
+
+        Returns:
+            执行结果
+        """
+        self._log("execute_plan", "开始执行方案...")
+
+        exec_config = self.product_rules.get("execution_level", {})
+        result = ExecutionResult()
+
+        # 检查是否需要用户确认
+        if exec_config.get("require_user_confirmation_before_booking", True) and not user_confirmed:
+            result.final_summary = "等待用户确认后执行"
+            result.all_succeeded = False
+            return result
+
+        # 1. 预约活动
+        if exec_config.get("allow_mock_booking", True):
+            for activity in plan.activities:
+                booking_result = book_activity(activity)
+                result.activity_booking_status.append(booking_result)
+                self._log(
+                    "execute_plan",
+                    f"活动预约: {activity.name} - {'成功' if booking_result.success else '失败'}"
+                )
+
+        # 2. 预约餐厅
+        if exec_config.get("allow_mock_booking", True) and plan.restaurant:
+            # 从时间线中提取用餐开始时间
+            meal_time = "18:00"
+            for item in plan.timeline:
+                if item.type == "meal":
+                    meal_time = item.start_time
+                    break
+
+            booking_result = book_restaurant(
+                plan.restaurant,
+                self.state.user_request.people_count or 1,
+                meal_time
+            )
+            result.restaurant_booking_status = booking_result
+            self._log(
+                "execute_plan",
+                f"餐厅预约: {plan.restaurant.name} - {'成功' if booking_result.success else '失败'}"
+            )
+
+            # 如果餐厅预约失败，尝试备选
+            if not booking_result.success:
+                self._log("execute_plan", "餐厅预约失败，尝试备选餐厅...")
+                fallback_restaurant = self._find_fallback_restaurant(plan.restaurant)
+                if fallback_restaurant:
+                    booking_result = book_restaurant(
+                        fallback_restaurant,
+                        self.state.user_request.people_count or 1,
+                        meal_time
+                    )
+                    if booking_result.success:
+                        plan.restaurant = fallback_restaurant
+                        result.restaurant_booking_status = booking_result
+                        self._log("execute_plan", f"已切换至备选餐厅: {fallback_restaurant.name}")
+
+        # 3. 下单（蛋糕/鲜花）
+        if exec_config.get("allow_mock_order", True):
+            # 根据场景决定是否需要蛋糕或鲜花
+            if self.state.user_request.companions in [CompanionsType.FAMILY_WITH_KIDS, CompanionsType.FAMILY_MIXED]:
+                # 家庭场景：可能买蛋糕
+                order_result = order_item("cake", plan.restaurant.location if plan.restaurant else get_user_context()["home_location"])
+                result.order_status.append(order_result)
+                self._log("execute_plan", f"蛋糕下单 - {'成功' if order_result.success else '失败'}")
+
+        # 4. 发送消息
+        if exec_config.get("allow_mock_send_message", True):
+            # 发送给家人或朋友
+            family_types = [CompanionsType.FAMILY_WITH_KIDS, CompanionsType.FAMILY_WITH_ELDERLY, CompanionsType.FAMILY_MIXED]
+            recipient = "家人" if self.state.user_request.companions in family_types else "朋友"
+            message_result = send_plan(
+                recipient,
+                f"活动方案：{plan.title}，时间：{plan.timeline[0].start_time}"
+            )
+            result.message_status.append(message_result)
+            self._log("execute_plan", f"消息发送给{recipient} - {'成功' if message_result.success else '失败'}")
+
+        # 生成执行摘要
+        result.executed_at = datetime.now()
+        result.all_succeeded = all(
+            b.success for b in result.activity_booking_status
+        ) and (result.restaurant_booking_status is None or result.restaurant_booking_status.success)
+
+        result.final_summary = self._generate_execution_summary(result)
+        self.state.execution_result = result
+
+        self._log("execute_plan", f"方案执行完成，全部成功: {result.all_succeeded}")
+
+        return result
+
+    def _find_fallback_restaurant(self, original: Restaurant) -> Optional[Restaurant]:
+        """查找备选餐厅"""
+        # 查找同类型的其他餐厅
+        for restaurant in self.state.found_restaurants:
+            if restaurant.id != original.id and restaurant.is_available:
+                return restaurant
+        return None
+
+    def _generate_execution_summary(self, result: ExecutionResult) -> str:
+        """生成执行摘要"""
+        summary_parts = []
+
+        # 活动预约
+        for booking in result.activity_booking_status:
+            status = "✓ 成功" if booking.success else "✗ 失败"
+            summary_parts.append(f"活动预约（{booking.item_name}）: {status}")
+
+        # 餐厅预约
+        if result.restaurant_booking_status:
+            status = "✓ 成功" if result.restaurant_booking_status.success else "✗ 失败"
+            summary_parts.append(f"餐厅预约（{result.restaurant_booking_status.item_name}）: {status}")
+
+        # 订单
+        for order in result.order_status:
+            status = "✓ 成功" if order.success else "✗ 失败"
+            item_name = {"cake": "蛋糕", "flower": "鲜花", "gift": "礼物"}.get(order.item_type, order.item_type)
+            summary_parts.append(f"{item_name}下单: {status}")
+
+        # 消息
+        for msg in result.message_status:
+            status = "✓ 成功" if msg.success else "✗ 失败"
+            summary_parts.append(f"发送消息（{msg.recipient}）: {status}")
+
+        return "\n".join(summary_parts)
+
+    # ==================== Step 10: 异常处理 ====================
+
+    def handle_failure(
+        self,
+        failure_type: str,
+        original_item: Any,
+        context: Optional[Dict] = None
+    ) -> Any:
+        """
+        异常处理
+
+        Args:
+            failure_type: 异常类型
+            original_item: 原始项目
+            context: 上下文信息
+
+        Returns:
+            替代方案
+        """
+        self._log("handle_failure", f"处理异常: {failure_type}")
+
+        fallbacks = self.product_rules.get("failure_fallbacks", {})
+
+        if failure_type == "restaurant_unavailable":
+            # 选择备选餐厅
+            strategy = fallbacks.get("restaurant_unavailable", "选择同商圈备选餐厅")
+            return self._find_fallback_restaurant(original_item)
+
+        elif failure_type == "activity_unavailable":
+            # 优先选择无需预约的活动
+            strategy = fallbacks.get("activity_unavailable", "优先替换为无需预约的活动")
+            for activity in self.state.found_activities:
+                if not activity.need_booking and activity.is_available:
+                    return activity
+            # 如果没有，返回 citywalk
+            return Activity(
+                id="fallback_citywalk",
+                name="附近 Citywalk",
+                type="citywalk",
+                location=Location(name="附近街区", address="社区周边"),
+                distance_km=1.0,
+                duration_minutes=60,
+                suggested_duration_minutes=60,
+                child_friendly=True,
+                price_per_person=0,
+                reservation_available=False,
+                need_booking=False,
+                description="附近街区散步，无需预约"
+            )
+
+        elif failure_type == "route_too_far":
+            # 重新搜索更近的活动和餐厅
+            strategy = fallbacks.get("route_too_far", "重新搜索更近的活动和餐厅")
+            max_drive = 15  # 缩小搜索范围
+            return None  # 需要重新搜索
+
+        elif failure_type == "not_child_friendly":
+            strategy = fallbacks.get("not_child_friendly", "剔除该活动或餐厅")
+            return None
+
+        elif failure_type == "diet_unfriendly":
+            strategy = fallbacks.get("diet_unfriendly", "优先选择更匹配饮食约束的餐厅")
+            for restaurant in self.state.found_restaurants:
+                if restaurant.diet_friendly:
+                    return restaurant
+            return None
+
+        self.state.fallback_used = True
+        self.state.fallback_reason = failure_type
+
+        return None
+
+    # ==================== 主流程 ====================
+
+    def run(
+        self,
+        user_input: str,
+        user_confirmed: bool = True
+    ) -> Dict[str, Any]:
+        """
+        运行 Agent 主流程
+
+        Args:
+            user_input: 用户输入
+            user_confirmed: 用户是否已确认执行
+
+        Returns:
+            执行结果和状态
+        """
+        self._log("run", "=" * 50)
+        self._log("run", "开始执行 Agent 主流程")
+
+        try:
+            # Step 1: 解析请求
+            request = self.parse_request(user_input)
+
+            # Step 2: 补全缺失信息
+            request = self.complete_missing_slots(request)
+
+            # Step 3: 搜索活动
+            activities = self.search_activities(request)
+
+            # Step 4: 搜索餐厅
+            restaurants = self.search_restaurants(request)
+
+            # Step 5: 构建候选方案
+            plans = self.build_candidate_plans(request, activities, restaurants)
+
+            if not plans:
+                return {
+                    "success": False,
+                    "error": "无法构建可行的活动方案",
+                    "state": self._get_state_dict()
+                }
+
+            # Step 6: 评分
+            plans = self.score_plans(plans)
+
+            # Step 7: 选择最优方案
+            best_plan = self.choose_best_plan(plans)
+
+            # Step 8: 执行方案
+            execution_result = self.execute_plan(best_plan, user_confirmed)
+
+            self._log("run", "Agent 主流程执行完成")
+
+            return {
+                "success": True,
+                "request": request.to_dict(),
+                "candidate_plans_count": len(plans),
+                "best_plan": self._plan_to_dict(best_plan),
+                "execution_result": self._execution_to_dict(execution_result),
+                "state": self._get_state_dict()
+            }
+
+        except Exception as e:
+            self._log("run", f"执行出错: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "state": self._get_state_dict()
+            }
+
+    def _plan_to_dict(self, plan: CandidatePlan) -> Dict[str, Any]:
+        """将方案转换为字典"""
+        return {
+            "plan_id": plan.plan_id,
+            "title": plan.title,
+            "timeline": [
+                {
+                    "time": f"{item.start_time}-{item.end_time}",
+                    "activity": item.activity,
+                    "location": item.location,
+                    "type": item.type
+                }
+                for item in plan.timeline
+            ],
+            "total_duration_minutes": plan.total_duration_minutes,
+            "activities": [
+                {
+                    "name": a.name,
+                    "type": a.type,
+                    "child_friendly": a.child_friendly,
+                    "need_booking": a.need_booking
+                }
+                for a in plan.activities
+            ],
+            "restaurant": {
+                "name": plan.restaurant.name,
+                "cuisine_type": plan.restaurant.cuisine_type,
+                "diet_friendly": plan.restaurant.diet_friendly
+            } if plan.restaurant else None,
+            "score": plan.score,
+            "score_breakdown": plan.score_breakdown.to_dict(),
+            "risks": plan.risks,
+            "recommendation_reason": plan.recommendation_reason
+        }
+
+    def _execution_to_dict(self, result: ExecutionResult) -> Dict[str, Any]:
+        """将执行结果转换为字典"""
+        return {
+            "all_succeeded": result.all_succeeded,
+            "activity_bookings": [
+                {"item": b.item_name, "success": b.success, "message": b.message}
+                for b in result.activity_booking_status
+            ],
+            "restaurant_booking": {
+                "item": result.restaurant_booking_status.item_name,
+                "success": result.restaurant_booking_status.success,
+                "message": result.restaurant_booking_status.message
+            } if result.restaurant_booking_status else None,
+            "orders": [
+                {"item": o.item_type, "success": o.success, "message": o.message}
+                for o in result.order_status
+            ],
+            "messages": [
+                {"recipient": m.recipient, "success": m.success}
+                for m in result.message_status
+            ],
+            "final_summary": result.final_summary
+        }
+
+    def _get_state_dict(self) -> Dict[str, Any]:
+        """获取状态字典"""
+        return {
+            "current_step": self.state.current_step,
+            "logs_count": len(self.state.logs),
+            "fallback_used": self.state.fallback_used,
+            "fallback_reason": self.state.fallback_reason
+        }
+
+
+# 便捷的调用函数
+def run_agent(user_input: str, user_confirmed: bool = True) -> Dict[str, Any]:
+    """
+    便捷函数：运行 Agent
+
+    Args:
+        user_input: 用户输入
+        user_confirmed: 用户是否已确认
+
+    Returns:
+        执行结果
+    """
+    agent = WeekendActivityAgent()
+    return agent.run(user_input, user_confirmed)
