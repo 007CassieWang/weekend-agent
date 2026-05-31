@@ -1,6 +1,8 @@
 """
 提示词模板和 mock_llm 解析规则
 支持从 product_rules.yaml 读取配置，并可选接入 DeepSeek LLM 提升解析准确率。
+
+v2 更新: 增加 LLM token 用量追踪上报。
 """
 
 import os
@@ -8,6 +10,8 @@ import json
 import yaml
 import random
 import re
+import logging
+from functools import lru_cache
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -15,10 +19,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger("weekend_agent.prompts")
+
 # ==================== 规则加载 ====================
 
+@lru_cache(maxsize=1)
 def load_product_rules() -> Dict[str, Any]:
-    """加载产品规则配置"""
+    """加载产品规则配置（结果缓存，避免重复磁盘读取和 YAML 解析）。"""
     try:
         with open("config/product_rules.yaml", "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
@@ -78,6 +85,7 @@ def parse_request(user_input: str) -> Dict[str, Any]:
     if parser_cfg.get("enabled", False):
         try:
             result = parse_request_llm(user_input, rules, llm_cfg)
+            _ensure_transportation_context_modifiers(result)
             return result
         except Exception as e:
             if parser_cfg.get("fallback_to_mock", True):
@@ -90,10 +98,37 @@ def parse_request(user_input: str) -> Dict[str, Any]:
     return parse_request_mock(user_input)
 
 
+def _ensure_transportation_context_modifiers(result: Dict[str, Any]) -> None:
+    """确保 transportation 核心槽位被正确映射到 context_modifiers。
+
+    当 transportation 已设置但 context_modifiers 中缺少对应的派生标签时自动补充。
+    避免 LLM/自由文本路径下遗漏通勤方式对行程规划的影响。
+    """
+    transport = result.get("transportation")
+    if not transport:
+        return
+    transport_mod_map = {
+        "driving": "parking_needed",
+        "transit": "near_subway",
+        "bike_walk": "low_walking",
+    }
+    auto_mod = transport_mod_map.get(transport)
+    if not auto_mod:
+        return
+    modifiers = result.get("context_modifiers", [])
+    if not isinstance(modifiers, list):
+        modifiers = []
+    if auto_mod not in modifiers:
+        modifiers.insert(0, auto_mod)
+        result["context_modifiers"] = modifiers
+
+
 # ==================== LLM 解析 ====================
 
-def _build_llm_system_prompt(rules: Dict[str, Any]) -> str:
-    """从 product_rules.yaml 构建 LLM system prompt。"""
+@lru_cache(maxsize=1)
+def _build_llm_system_prompt() -> str:
+    """从 product_rules.yaml 构建 LLM system prompt（结果缓存，运行时仅构建一次）。"""
+    rules = load_product_rules()
     detection = rules.get("scenario_detection", {})
     output_schema = detection.get("output_schema", {})
     slot_schema = rules.get("slot_schema", {})
@@ -126,6 +161,12 @@ def _build_llm_system_prompt(rules: Dict[str, Any]) -> str:
 - location: 出发地点，无法确定时填 null
 - distance_preference: 距离偏好 "nearby" / "far"，无法确定时填 null
 - max_drive_minutes: 最大车程(分钟)，无法确定时填 null
+
+### 通勤方式（核心槽位，优先级最高）
+- transportation: 通勤方式，取值: "driving"（自驾）/ "transit"（地铁公交）/ "taxi"（打车）/ "bike_walk"（骑行步行）
+  影响后续 max_drive_minutes 解读、路线规划、停车/地铁偏好
+  当用户说"开车""自驾"时填 "driving"；"地铁""公交"时填 "transit"；"打车""叫车"时填 "taxi"；"骑车""步行""附近走走"时填 "bike_walk"
+  无法确定时填 null，不要臆测
 
 ### 偏好相关
 - budget_level: 预算等级 "low" / "medium" / "high"，默认 "medium"
@@ -174,6 +215,32 @@ def _build_llm_system_prompt(rules: Dict[str, Any]) -> str:
 """
 
 
+# ---- Token 用量追踪 ----
+
+def _try_record_usage(response: Any, model: str = "deepseek-chat") -> None:
+    """尝试从 OpenAI-compatible response 中提取用量并记录到日志。
+    不抛出异常，失败时静默跳过。"""
+    try:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+        total_tokens = getattr(usage, "total_tokens", 0) or prompt_tokens + completion_tokens
+
+        # DeepSeek 公开价格 (RMB / 1K tokens)
+        pricing = {"deepseek-chat": (0.001, 0.002), "deepseek-reasoner": (0.004, 0.016)}
+        input_price, output_price = pricing.get(model, (0.001, 0.002))
+        cost = (prompt_tokens / 1000) * input_price + (completion_tokens / 1000) * output_price
+
+        logger.info(
+            "llm_usage model=%s prompt_tokens=%d completion_tokens=%d total_tokens=%d cost_rmb=%.6f",
+            model, prompt_tokens, completion_tokens, total_tokens, cost,
+        )
+    except Exception:
+        pass  # 用量追踪不应影响主流程
+
+
 def parse_request_llm(
     user_input: str,
     rules: Optional[Dict[str, Any]] = None,
@@ -209,7 +276,7 @@ def parse_request_llm(
     max_tokens = llm_cfg.get("max_tokens", 2000)
     timeout = llm_cfg.get("timeout_seconds", 8)
 
-    system_prompt = _build_llm_system_prompt(rules)
+    system_prompt = _build_llm_system_prompt()
 
     response = client.chat.completions.create(
         model=model,
@@ -222,6 +289,8 @@ def parse_request_llm(
         timeout=timeout,
         response_format={"type": "json_object"},
     )
+
+    _try_record_usage(response, model)
 
     raw_text = response.choices[0].message.content.strip()
 
@@ -366,6 +435,8 @@ slot value 是对应槽位的具体值，如 budget_level 的值可以是 "low"/
             response_format={"type": "json_object"},
         )
 
+        _try_record_usage(response, "deepseek-chat")
+
         raw_text = response.choices[0].message.content.strip()
         if raw_text.startswith("```"):
             lines = raw_text.split("\n")
@@ -397,6 +468,11 @@ def _estimate_completeness(collected_slots: Dict[str, Any], sentences: list) -> 
     if collected_slots.get("transportation"):
         covered.add("transportation")
 
+    # transportation 是核心槽位，影响后续所有规划
+    if not collected_slots.get("transportation"):
+        # 通勤方式缺失是严重的信息缺口，completeness 直接打折扣
+        pass  # required_slots 中会加入 transportation，自然降低 completeness
+
     # 根据同行人类型判断还需要哪些关键槽位
     key_slots_by_companion = {
         "solo": ["activity_preference", "budget_level"],
@@ -413,7 +489,11 @@ def _estimate_completeness(collected_slots: Dict[str, Any], sentences: list) -> 
         required_slots.update(key_slots_by_companion.get(c, ["budget_level", "food_preference"]))
 
     if not required_slots:
-        required_slots = {"budget_level", "food_preference", "activity_preference"}
+        required_slots = {"transportation", "budget_level", "food_preference", "activity_preference"}
+
+    # transportation 是核心槽位，未收集时降低完整度
+    if not collected_slots.get("transportation"):
+        required_slots.add("transportation")
 
     # 从已有槽位答案和猜测句中提取已覆盖的槽位
     existing_answers = collected_slots.get("slot_answers", {})
@@ -488,10 +568,11 @@ def _generate_guess_sentences_mock(collected_slots: Dict[str, Any]) -> list:
 
 # ==================== Mock 规则解析（保留作为 fallback） ====================
 
-def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = None, transportation: Optional[str] = None) -> Dict[str, Any]:
     """多标签场景识别。
 
     只根据用户明确表达或强语义命中激活儿童、老人、宠物、减脂、无障碍等约束。
+    transportation 为核心槽位，传入后会据此自动派生 context_modifiers（如 driving → parking_needed）。
     """
     rules = rules or load_product_rules()
     text = user_input.lower()
@@ -586,6 +667,17 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
     if has_elder:
         context_modifiers.extend(["low_walking", "quiet"])
 
+    # 通勤方式自动派生 context_modifiers（核心槽位，避免重复从关键词检测）
+    if transportation:
+        transport_mod_map = {
+            "driving": "parking_needed",
+            "transit": "near_subway",
+            "bike_walk": "low_walking",
+        }
+        auto_mod = transport_mod_map.get(transportation)
+        if auto_mod and auto_mod not in context_modifiers:
+            context_modifiers.insert(0, auto_mod)
+
     hard_constraints: List[str] = []
     if has_child:
         hard_constraints.append("child_safety")
@@ -664,13 +756,13 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
     }
 
 
-def detect_scenario_type(user_input: str, rules: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def detect_scenario_type(user_input: str, rules: Optional[Dict[str, Any]] = None, transportation: Optional[str] = None) -> Dict[str, Any]:
     """根据多标签结果派生旧版 scenario_type，保证 demo 兼容。"""
     rules = rules or load_product_rules()
     detection = rules.get("scenario_detection", {})
     scenarios = detection.get("scenarios", {})
     default_type = detection.get("default_scenario_type", "general_leisure")
-    labels = classify_scenario_labels(user_input, rules)
+    labels = classify_scenario_labels(user_input, rules, transportation=transportation)
     companion_context = set(labels["companion_context"])
     hard_constraints = set(labels["hard_constraints"])
     primary_intent = labels["primary_intent"]
@@ -789,6 +881,7 @@ def parse_request_mock(user_input: str) -> Dict[str, Any]:
         "has_elderly": False,
         "location": None,
         "distance_preference": None,
+        "transportation": None,
         "budget_level": None,
         "activity_preference": None,
         "food_preference": None,
@@ -800,6 +893,18 @@ def parse_request_mock(user_input: str) -> Dict[str, Any]:
         "execution_intent": "plan_then_confirm",
         "missing_slots": [],
     }
+
+    # ===== 解析通勤方式（核心槽位，优先级最高）=====
+    transport_rules = {
+        "driving": ["自驾", "开车", "自己开", "自己开车"],
+        "transit": ["地铁", "公交", "坐地铁", "公共交通", "搭地铁"],
+        "taxi": ["打车", "叫车", "网约车", "滴滴", "出租车"],
+        "bike_walk": ["骑车", "骑行", "自行车", "步行", "走路", "走过去", "单车", "共享单车"],
+    }
+    for mode, keywords in transport_rules.items():
+        if _has_any(text, keywords):
+            result["transportation"] = mode
+            break
 
     # ===== 解析时间 =====
     # 今天/下午/晚上
@@ -968,7 +1073,7 @@ def parse_request_mock(user_input: str) -> Dict[str, Any]:
         if slot not in do_not_ask
     ]
 
-    scenario_result = detect_scenario_type(user_input, rules)
+    scenario_result = detect_scenario_type(user_input, rules, transportation=result.get("transportation"))
     result.update(scenario_result)
     labels = scenario_result.get("scenario_labels", {})
     result.update({

@@ -24,6 +24,26 @@ defaults:
   default_transportation: "driving"
   default_execution_mode: "plan_then_confirm"
 
+  # 通勤方式选项：影响 max_drive_minutes 解读、路线规划、停车/地铁偏好
+  transportation_options:
+    driving:
+      label: "自驾"
+      auto_context_modifiers: ["parking_needed"]
+      affects: ["max_drive_minutes", "route_smoothness", "parking_fit"]
+    transit:
+      label: "地铁/公交"
+      auto_context_modifiers: ["near_subway"]
+      affects: ["max_drive_minutes", "route_smoothness", "subway_fit"]
+    taxi:
+      label: "打车"
+      auto_context_modifiers: []
+      affects: ["max_drive_minutes", "route_smoothness"]
+    bike_walk:
+      label: "骑行/步行"
+      auto_context_modifiers: ["low_walking"]
+      affects: ["max_drive_minutes", "route_smoothness", "distance_fit"]
+      note: "骑行/步行模式下 max_drive_minutes 解读为最大骑行/步行时间，活动搜索半径大幅缩小"
+
   # 不要默认有孩子、老婆、家庭；缺失时保持 unknown/null
   people_count: null
   companions: "unknown"
@@ -48,8 +68,9 @@ defaults:
 
 # ==================== 槽位分类 ====================
 slot_schema:
-  # 核心槽位：大多数场景都需要
+  # 核心槽位：大多数场景都需要。transportation 优先级最高，影响行程路线规划。
   core_slots:
+    - transportation
     - time_window
     - start_time
     - duration_hours
@@ -81,6 +102,7 @@ slot_schema:
   # 追问优先级：只追问会显著影响可执行性的槽位
   clarification_priority:
     high:
+      - transportation
       - location
       - date_or_time_window
       - people_count
@@ -549,6 +571,7 @@ legacy_field_mapping:
 # ==================== 追问规则 ====================
 clarification_rules:
   ask_if_missing:
+    - transportation
     - location
     - date_or_time_window
     - people_count
@@ -573,6 +596,7 @@ clarification_rules:
 
   # 仅当用户表达模糊且会影响方案质量时追问
   conditional_questions:
+    missing_transportation: "你怎么过去？自驾、地铁公交、打车还是骑行步行？"
     missing_people_count: "这次大概几个人一起？"
     missing_location: "你希望从哪里出发，或者我先按默认位置规划？"
     ambiguous_activity_preference: "你更想偏室内放松、户外走走，还是吃饭聊天？"

@@ -4,21 +4,33 @@ FastAPI wrapper for the weekend activity planning agent.
 The Python agent stays as the source of truth. The separate frontend calls this
 API so UI work can move at normal web-app speed instead of fighting Streamlit's
 generated DOM.
+
+v2 更新:
+- /api/chat 默认只生成方案 (draft)，不执行
+- 新增 /api/execute 端点用于用户确认后执行 (commit)
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from agent_harness import run_agent
+from agent_harness import run_agent, run_agent_plan_only
 from prompts import generate_followup_questions
 
 
 app = FastAPI(title="Weekend Activity Agent API")
+
+# 服务前端静态文件（预构建的 dist）
+FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,9 +44,17 @@ app.add_middleware(
 )
 
 
+# ---- In-memory session store (MVP: 单用户; 生产应换 Redis/DB) ----
+_sessions: Dict[str, Any] = {}
+
+
 class ChatRequest(BaseModel):
     message: str = Field(default="", max_length=500)
     structured_data: Optional[Dict[str, Any]] = None
+
+
+class ExecuteRequest(BaseModel):
+    plan_id: str
 
 
 class FollowupRequest(BaseModel):
@@ -52,6 +72,10 @@ def health() -> Dict[str, str]:
 
 @app.post("/api/chat")
 def chat(payload: ChatRequest) -> Dict[str, Any]:
+    """
+    生成活动方案（draft 阶段）。默认只规划不执行，返回方案供前端展示。
+    用户确认后调用 /api/execute 执行。
+    """
     user_input = payload.message.strip()
 
     # 如果有结构化数据，合成自然语言消息
@@ -62,7 +86,47 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="message is required")
 
     try:
-        return run_agent(user_input, user_confirmed=False)
+        # 默认 plan_only: 只生成方案，不执行
+        result = run_agent_plan_only(user_input)
+        # 缓存 agent 实例供后续 /api/execute 使用
+        # (MVP: 简单缓存; 生产应使用 agent 实例的 state)
+        if result.get("plan_id"):
+            _sessions[result["plan_id"]] = result
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/execute")
+def execute_plan(payload: ExecuteRequest) -> Dict[str, Any]:
+    """
+    用户确认后执行方案（commit 阶段）。
+    重新运行 agent 全流程并执行 mock 预约/下单/消息发送。
+    """
+    plan_id = payload.plan_id.strip()
+    if not plan_id:
+        raise HTTPException(status_code=400, detail="plan_id is required")
+
+    # 从缓存中获取原始请求文本
+    cached = _sessions.get(plan_id, {})
+    original_request = cached.get("request", {})
+
+    # 用原始请求重新运行（包含执行阶段）
+    user_input = original_request.get("raw_text", "")
+    if not user_input:
+        # fallback: 从缓存的 best_plan 重建
+        best_plan = cached.get("best_plan", {})
+        user_input = best_plan.get("title", "")
+
+    if not user_input:
+        raise HTTPException(status_code=400, detail="无法找到对应的原始请求")
+
+    try:
+        # full mode: 生成方案 + 执行
+        result = run_agent(user_input, user_confirmed=True, execute_mode="full")
+        # 清理缓存
+        _sessions.pop(plan_id, None)
+        return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -156,3 +220,13 @@ def _synthesize_message(structured: Dict[str, Any]) -> str:
             parts.append("，".join(mod_parts))
 
     return "帮我在上海安排一个周末活动。" + "，".join(parts) + "。"
+
+
+# ---- SPA fallback: 非 /api 路径返回 index.html ----
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    """SPA 回退路由：非 API 路径返回前端 index.html"""
+    index_path = FRONTEND_DIST / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    return {"message": "Frontend not built. Run: cd frontend && npm run build"}

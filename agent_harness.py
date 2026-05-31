@@ -1,8 +1,15 @@
 """
 Agent Harness - 周末闲时活动规划 Agent 主流程
 负责状态管理、工具调度、异常处理和执行动作
+
+v2 更新:
+- Agentic feedback loop: 搜索/构建失败时自动放宽约束重试
+- Draft/Commit 分离: 方案生成与执行分离，支持用户确认后再执行
+- 结构化日志与成本追踪
 """
 
+import json
+import logging
 import yaml
 import uuid
 from typing import List, Optional, Dict, Any, Tuple
@@ -24,12 +31,28 @@ from tools import (
 from prompts import parse_request, get_recommendation_reason
 from scoring import score_plans, calculate_plan_score
 
+# 结构化日志
+logger = logging.getLogger("weekend_agent")
+logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter(
+        '{"ts":"%(asctime)s","lvl":"%(levelname)s","logger":"%(name)s",%(message)s}',
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    ))
+    logger.addHandler(_handler)
+
+# 质量门禁阈值
+QUALITY_SCORE_THRESHOLD = 55  # 低于此分触发重试
+MAX_SEARCH_RETRIES = 3
+
 
 class WeekendActivityAgent:
     """周末闲时活动规划 Agent"""
 
     def __init__(self):
         self.state = AgentState()
+        self.state.request_id = uuid.uuid4().hex[:12]
         self.product_rules = self._load_product_rules()
 
     def _load_product_rules(self) -> Dict[str, Any]:
@@ -38,7 +61,7 @@ class WeekendActivityAgent:
             with open("config/product_rules.yaml", "r", encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except Exception as e:
-            # 返回默认配置
+            logger.warning("product_rules.yaml 加载失败，使用默认配置", extra={"error": str(e)})
             return {
                 "defaults": {
                     "start_time": "14:00",
@@ -62,10 +85,17 @@ class WeekendActivityAgent:
                 }
             }
 
-    def _log(self, step: str, message: str, details: Optional[Dict] = None):
-        """记录执行日志"""
+    def _log(self, step: str, message: str, details: Optional[Dict] = None, level: str = "info"):
+        """结构化日志记录"""
         self.state.add_log(step, message, details)
-        print(f"[{step}] {message}")
+        log_data = json.dumps({
+            "rid": self.state.request_id,
+            "step": step,
+            "msg": message,
+            "details": details or {},
+        }, ensure_ascii=False)
+        log_method = getattr(logger, level, logger.info)
+        log_method(log_data)
 
     # ==================== Step 1: 解析请求 ====================
 
@@ -129,6 +159,7 @@ class WeekendActivityAgent:
             has_child=parsed_data.get("has_child", False),
             has_elderly=parsed_data.get("has_elderly", False),
             distance_preference=parsed_data.get("distance_preference"),
+            transportation=parsed_data.get("transportation"),
             budget_level=budget_enum,
             activity_preference=parsed_data.get("activity_preference"),
             food_preference=parsed_data.get("food_preference"),
@@ -220,32 +251,40 @@ class WeekendActivityAgent:
 
         return request
 
-    # ==================== Step 3: 搜索活动 ====================
+    # ==================== Step 3: 搜索活动（支持重试放宽） ====================
 
-    def search_activities(self, request: UserRequest) -> List[Activity]:
+    def _get_search_params(self, request: UserRequest, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """构建搜索参数，支持重试时逐步放宽约束。"""
+        overrides = overrides or {}
+        defaults = self.product_rules.get("defaults", {})
+        max_drive = overrides.get("max_drive_minutes", defaults.get("max_drive_minutes", 30))
+        return {
+            "location": request.location or "home",
+            "child_age": request.child_age if (request.has_child and not overrides.get("drop_child_filter")) else None,
+            "duration_hours": request.duration_hours or defaults.get("duration_hours", 4),
+            "max_drive_minutes": max_drive,
+            "preferences": {
+                "activity_style": request.activity_preference,
+                "budget": request.budget_level,
+            },
+        }
+
+    def search_activities(self, request: UserRequest, overrides: Optional[Dict[str, Any]] = None) -> List[Activity]:
         """
         搜索附近适合的活动
 
         Args:
             request: 用户请求
+            overrides: 搜索参数覆盖（用于重试放宽）
 
         Returns:
             活动列表
         """
-        self._log("search_activities", "正在搜索附近活动...")
+        overrides = overrides or {}
+        params = self._get_search_params(request, overrides)
+        self._log("search_activities", f"正在搜索附近活动 (max_drive={params['max_drive_minutes']}min)...")
 
-        max_drive = self.product_rules.get("defaults", {}).get("max_drive_minutes", 30)
-
-        activities = search_activities(
-            location=request.location or "home",
-            child_age=request.child_age if request.has_child else None,
-            duration_hours=request.duration_hours or self.product_rules.get("defaults", {}).get("duration_hours", 4),
-            max_drive_minutes=max_drive,
-            preferences={
-                "activity_style": request.activity_preference,
-                "budget": request.budget_level
-            }
-        )
+        activities = search_activities(**params)
         activities = self._sort_supply_by_scenario(
             self._filter_supply_by_scenario(activities, request),
             request,
@@ -256,29 +295,32 @@ class WeekendActivityAgent:
 
         return activities
 
-    # ==================== Step 4: 搜索餐厅 ====================
+    # ==================== Step 4: 搜索餐厅（支持重试放宽） ====================
 
-    def search_restaurants(self, request: UserRequest) -> List[Restaurant]:
+    def search_restaurants(self, request: UserRequest, overrides: Optional[Dict[str, Any]] = None) -> List[Restaurant]:
         """
         搜索适合的餐厅
 
         Args:
             request: 用户请求
+            overrides: 搜索参数覆盖（用于重试放宽）
 
         Returns:
             餐厅列表
         """
-        self._log("search_restaurants", "正在搜索餐厅...")
+        overrides = overrides or {}
+        defaults = self.product_rules.get("defaults", {})
+        max_drive = overrides.get("max_drive_minutes", defaults.get("max_drive_minutes", 30))
 
-        max_drive = self.product_rules.get("defaults", {}).get("max_drive_minutes", 30)
+        self._log("search_restaurants", f"正在搜索餐厅 (max_drive={max_drive}min)...")
 
         restaurants = search_restaurants(
             location=request.location or "home",
             people_count=request.people_count or 1,
-            diet_friendly=request.scenario_type == "health_diet" or request.diet_goal != "none",
-            child_friendly=request.has_child,
+            diet_friendly=(request.scenario_type == "health_diet" or request.diet_goal != "none") and not overrides.get("drop_diet_filter"),
+            child_friendly=request.has_child and not overrides.get("drop_child_filter"),
             group_friendly=bool(request.people_count and request.people_count > 2),
-            max_drive_minutes=max_drive
+            max_drive_minutes=max_drive,
         )
         restaurants = self._sort_supply_by_scenario(
             self._filter_supply_by_scenario(restaurants, request),
@@ -1032,25 +1074,52 @@ class WeekendActivityAgent:
 
         return None
 
-    # ==================== 主流程 ====================
+    # ==================== 渐进式约束放宽 ====================
+
+    def _build_retry_overrides(self, retry: int) -> Dict[str, Any]:
+        """根据重试次数生成逐步放宽的搜索参数。"""
+        overrides: Dict[str, Any] = {}
+        relaxed: List[str] = []
+
+        if retry >= 1:
+            overrides["max_drive_minutes"] = int(
+                self.product_rules.get("defaults", {}).get("max_drive_minutes", 30) * 1.5
+            )
+            relaxed.append(f"max_drive_minutes → {overrides['max_drive_minutes']}min")
+
+        if retry >= 2:
+            overrides["drop_child_filter"] = True
+            overrides["drop_diet_filter"] = True
+            relaxed.append("drop_child_filter, drop_diet_filter")
+
+        if retry >= 3:
+            overrides["max_drive_minutes"] = int(
+                self.product_rules.get("defaults", {}).get("max_drive_minutes", 30) * 2.5
+            )
+            relaxed.append(f"max_drive_minutes → {overrides['max_drive_minutes']}min (大幅放宽)")
+
+        self.state.relaxed_constraints = relaxed
+        return overrides
+
+    # ==================== 主流程（v2: agentic loop + draft/commit） ====================
 
     def run(
         self,
         user_input: str,
-        user_confirmed: bool = True
+        user_confirmed: bool = True,
+        execute_mode: str = "full"  # "plan_only" | "full"
     ) -> Dict[str, Any]:
         """
-        运行 Agent 主流程
+        运行 Agent 主流程。
 
-        Args:
-            user_input: 用户输入
-            user_confirmed: 用户是否已确认执行
+        execute_mode:
+          - "plan_only": 只生成方案，不执行（draft 阶段）
+          - "full": 生成方案后直接执行（commit 阶段，需 user_confirmed=True）
 
-        Returns:
-            执行结果和状态
+        内置 agentic feedback loop: 当搜索/构建结果不足时自动放宽约束重试。
         """
         self._log("run", "=" * 50)
-        self._log("run", "开始执行 Agent 主流程")
+        self._log("run", f"开始执行 Agent 主流程 (mode={execute_mode}, retries={self.state.max_retries})")
 
         try:
             # Step 1: 解析请求
@@ -1059,48 +1128,155 @@ class WeekendActivityAgent:
             # Step 2: 补全缺失信息
             request = self.complete_missing_slots(request)
 
-            # Step 3: 搜索活动
-            activities = self.search_activities(request)
+            # Step 3-6: 搜索 → 构建 → 评分（带重试 loop）
+            plans: List[CandidatePlan] = []
+            best_plan: Optional[CandidatePlan] = None
 
-            # Step 4: 搜索餐厅
-            restaurants = self.search_restaurants(request)
+            for attempt in range(self.state.max_retries + 1):
+                self.state.retry_count = attempt
+                overrides = self._build_retry_overrides(attempt)
 
-            # Step 5: 构建候选方案
-            plans = self.build_candidate_plans(request, activities, restaurants)
+                if attempt > 0:
+                    self._log("retry", f"第 {attempt} 次重试，放宽约束: {overrides}")
 
-            if not plans:
+                # Step 3: 搜索活动
+                activities = self.search_activities(request, overrides)
+
+                # Step 4: 搜索餐厅
+                restaurants = self.search_restaurants(request, overrides)
+
+                # 如果搜索结果太少，直接下一轮重试
+                if len(activities) < 1:
+                    self._log("retry", f"活动数量不足 ({len(activities)}), 准备重试", level="warning")
+                    continue
+
+                # Step 5: 构建候选方案
+                plans = self.build_candidate_plans(request, activities, restaurants)
+                if not plans:
+                    self._log("retry", "无法构建可行方案，准备重试", level="warning")
+                    continue
+
+                # Step 6: 评分 + 质量门禁
+                plans = self.score_plans(plans)
+                best_plan = plans[0] if plans else None
+
+                if best_plan and best_plan.score >= QUALITY_SCORE_THRESHOLD:
+                    self._log("retry", f"方案质量达标 (score={best_plan.score}), 停止重试")
+                    break
+                elif attempt < self.state.max_retries:
+                    self._log(
+                        "retry",
+                        f"方案质量不达标 (score={best_plan.score if best_plan else 'N/A'} < {QUALITY_SCORE_THRESHOLD})，准备重试",
+                        level="warning",
+                    )
+                else:
+                    self._log("retry", f"已达最大重试次数，使用当前最优方案 (score={best_plan.score if best_plan else 'N/A'})")
+
+            if not plans or not best_plan:
                 return {
                     "success": False,
-                    "error": "无法构建可行的活动方案",
-                    "state": self._get_state_dict()
+                    "error": f"经过 {self.state.retry_count} 次重试仍无法构建可行的活动方案",
+                    "state": self._get_state_dict(),
                 }
 
-            # Step 6: 评分
-            plans = self.score_plans(plans)
-
-            # Step 7: 选择最优方案
+            # Step 7: 选择最优方案 + 生成推荐理由
             best_plan = self.choose_best_plan(plans)
 
-            # Step 8: 执行方案
+            # ===== Draft/Commit 分离 =====
+            if execute_mode == "plan_only":
+                # 仅生成方案，等待用户确认
+                self.state.confirmation_status = "pending"
+                self.state.confirmed_plan_id = best_plan.plan_id
+                self._log("run", f"方案已生成 (plan_only), 等待用户确认. plan_id={best_plan.plan_id}")
+
+                return {
+                    "success": True,
+                    "phase": "draft",
+                    "plan_id": best_plan.plan_id,
+                    "request": request.to_dict(),
+                    "candidate_plans_count": len(plans),
+                    "all_plans": [self._plan_to_dict(p) for p in plans[:3]],
+                    "best_plan": self._plan_to_dict(best_plan),
+                    "requires_confirmation": True,
+                    "state": self._get_state_dict(),
+                }
+
+            # Step 8: 执行方案（full mode / commit phase）
             execution_result = self.execute_plan(best_plan, user_confirmed)
+            self.state.confirmation_status = "confirmed" if execution_result.all_succeeded else "rejected"
 
             self._log("run", "Agent 主流程执行完成")
 
             return {
                 "success": True,
+                "phase": "executed",
+                "plan_id": best_plan.plan_id,
                 "request": request.to_dict(),
                 "candidate_plans_count": len(plans),
+                "all_plans": [self._plan_to_dict(p) for p in plans[:3]],
                 "best_plan": self._plan_to_dict(best_plan),
                 "execution_result": self._execution_to_dict(execution_result),
-                "state": self._get_state_dict()
+                "state": self._get_state_dict(),
             }
 
         except Exception as e:
-            self._log("run", f"执行出错: {str(e)}")
+            self._log("run", f"执行出错: {str(e)}", level="error")
+            logger.exception(f"Agent run failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
-                "state": self._get_state_dict()
+                "state": self._get_state_dict(),
+            }
+
+    def confirm_and_execute(self, plan_id: str) -> Dict[str, Any]:
+        """
+        用户确认后执行方案（commit 阶段）。
+
+        调用前需确保 run(execute_mode="plan_only") 已成功生成方案并存于 state 中。
+        """
+        self._log("confirm_and_execute", f"用户确认执行 plan_id={plan_id}")
+
+        if self.state.confirmation_status != "pending":
+            return {
+                "success": False,
+                "error": f"当前确认状态为 {self.state.confirmation_status}，无法执行",
+                "state": self._get_state_dict(),
+            }
+
+        if self.state.confirmed_plan_id != plan_id:
+            return {
+                "success": False,
+                "error": f"plan_id 不匹配: 期望 {self.state.confirmed_plan_id}, 收到 {plan_id}",
+                "state": self._get_state_dict(),
+            }
+
+        plan = self.state.selected_plan
+        if not plan:
+            return {
+                "success": False,
+                "error": "未找到待执行的方案，请先调用 run(execute_mode='plan_only')",
+                "state": self._get_state_dict(),
+            }
+
+        try:
+            execution_result = self.execute_plan(plan, user_confirmed=True)
+            self.state.confirmation_status = "confirmed" if execution_result.all_succeeded else "rejected"
+            self.state.execution_result = execution_result
+
+            return {
+                "success": True,
+                "phase": "executed",
+                "plan_id": plan.plan_id,
+                "best_plan": self._plan_to_dict(plan),
+                "execution_result": self._execution_to_dict(execution_result),
+                "state": self._get_state_dict(),
+            }
+        except Exception as e:
+            self._log("confirm_and_execute", f"执行失败: {e}", level="error")
+            return {
+                "success": False,
+                "error": str(e),
+                "state": self._get_state_dict(),
             }
 
     def _plan_to_dict(self, plan: CandidatePlan) -> Dict[str, Any]:
@@ -1163,26 +1339,44 @@ class WeekendActivityAgent:
         }
 
     def _get_state_dict(self) -> Dict[str, Any]:
-        """获取状态字典"""
+        """获取状态字典（含可观测性指标）"""
         return {
+            "request_id": self.state.request_id,
             "current_step": self.state.current_step,
             "logs_count": len(self.state.logs),
             "fallback_used": self.state.fallback_used,
-            "fallback_reason": self.state.fallback_reason
+            "fallback_reason": self.state.fallback_reason,
+            "retry_count": self.state.retry_count,
+            "relaxed_constraints": self.state.relaxed_constraints,
+            "confirmation_status": self.state.confirmation_status,
+            "total_tokens": self.state.total_tokens,
+            "total_cost": round(self.state.total_cost, 6),
+            "llm_call_count": self.state.llm_call_count,
         }
 
 
-# 便捷的调用函数
-def run_agent(user_input: str, user_confirmed: bool = True) -> Dict[str, Any]:
+# ==================== 便捷调用函数 ====================
+
+def run_agent(
+    user_input: str,
+    user_confirmed: bool = True,
+    execute_mode: str = "full",
+) -> Dict[str, Any]:
     """
     便捷函数：运行 Agent
 
     Args:
         user_input: 用户输入
-        user_confirmed: 用户是否已确认
+        user_confirmed: 用户是否已确认（仅 execute_mode="full" 时生效）
+        execute_mode: "plan_only" 仅生成方案 / "full" 生成并执行
 
     Returns:
         执行结果
     """
     agent = WeekendActivityAgent()
-    return agent.run(user_input, user_confirmed)
+    return agent.run(user_input, user_confirmed=user_confirmed, execute_mode=execute_mode)
+
+
+def run_agent_plan_only(user_input: str) -> Dict[str, Any]:
+    """便捷函数：仅生成方案（draft 阶段），返回方案等待用户确认。"""
+    return run_agent(user_input, user_confirmed=False, execute_mode="plan_only")

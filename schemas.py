@@ -70,6 +70,7 @@ class UserRequest:
     friends_count: Optional[int] = None
     friend_gender_structure: Optional[str] = None
     distance_preference: Optional[str] = None
+    transportation: Optional[str] = None  # 通勤方式: driving/transit/taxi/bike_walk（核心槽位）
     budget_level: Optional[BudgetLevel] = None
     activity_preference: Optional[str] = None
     food_preference: Optional[str] = None
@@ -110,6 +111,7 @@ class UserRequest:
             "child_age": self.child_age,
             "has_child": self.has_child,
             "has_elderly": self.has_elderly,
+            "transportation": self.transportation,
             "budget_level": self.budget_level.value if self.budget_level else None,
             "activity_preference": self.activity_preference,
             "food_preference": self.food_preference,
@@ -322,6 +324,9 @@ class AgentState:
     # 当前步骤
     current_step: str = "idle"
 
+    # 请求追踪
+    request_id: str = ""
+
     # 执行日志
     logs: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -333,16 +338,43 @@ class AgentState:
     selected_plan: Optional[CandidatePlan] = None
     execution_result: Optional[ExecutionResult] = None
 
-    # 异常处理
+    # 异常处理与重试
     fallback_used: bool = False
     fallback_reason: Optional[str] = None
+    retry_count: int = 0
+    max_retries: int = 3
+    relaxed_constraints: List[str] = field(default_factory=list)
+
+    # Draft/Commit 两阶段确认
+    confirmation_status: str = "none"  # none | pending | confirmed | rejected
+    confirmed_plan_id: Optional[str] = None
+
+    # 可观测性
+    total_tokens: int = 0
+    total_cost: float = 0.0
+    llm_call_count: int = 0
 
     def add_log(self, step: str, message: str, details: Optional[Dict] = None):
         """添加执行日志"""
         self.logs.append({
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now().isoformat(),
+            "request_id": self.request_id,
             "step": step,
             "message": message,
             "details": details or {}
         })
         self.current_step = step
+
+    def record_llm_usage(self, model: str, prompt_tokens: int, completion_tokens: int):
+        """记录 LLM 调用用量和估算成本"""
+        self.llm_call_count += 1
+        self.total_tokens += prompt_tokens + completion_tokens
+
+        # 成本估算（RMB，按 DeepSeek 公开价格）
+        pricing = {
+            "deepseek-chat": (0.001, 0.002),     # 输入/输出 元/1K tokens
+            "deepseek-reasoner": (0.004, 0.016),
+        }
+        input_price, output_price = pricing.get(model, (0.001, 0.002))
+        cost = (prompt_tokens / 1000) * input_price + (completion_tokens / 1000) * output_price
+        self.total_cost += cost

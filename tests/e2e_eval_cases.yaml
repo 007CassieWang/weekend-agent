@@ -1,0 +1,108 @@
+# 端到端回归用例：验证完整 pipeline 输出的方案质量
+# 使用 scripts/evaluate_e2e.py 执行
+
+cases:
+  - case_id: family_weekend_plan
+    input: "周末带5岁孩子去户外活动，然后吃粤菜"
+    expected:
+      success: true
+      plan_has_activity: true
+      plan_has_restaurant: true
+      activity_child_friendly: true
+      total_duration_between: [180, 420]
+      score_above: 55
+      scenario_type: "family_with_children"
+
+  - case_id: couple_date_evening
+    input: "和女朋友今晚约会，想找个有氛围的西餐或展览"
+    expected:
+      success: true
+      plan_has_activity: true
+      plan_has_restaurant: true
+      total_duration_between: [120, 360]
+      score_above: 50
+      scenario_type_in: ["couple_date", "general_leisure"]
+
+  - case_id: solo_quiet_afternoon
+    input: "一个人周日下午找个安静地方待两小时"
+    expected:
+      success: true
+      plan_has_activity: true
+      total_duration_between: [60, 240]
+      score_above: 45
+      companion_context_contains: ["solo"]
+
+  - case_id: friends_low_budget
+    input: "下雨天和朋友出去，不想太累，预算人均100"
+    expected:
+      success: true
+      plan_has_activity: true
+      plan_has_restaurant: true
+      score_above: 45
+      companion_context_contains: ["friends"]
+
+  - case_id: meal_only
+    input: "今晚只想吃火锅，四个人，人均200以内"
+    expected:
+      success: true
+      plan_has_restaurant: true
+      score_above: 40
+
+  - case_id: elderly_walk
+    input: "周六带爸妈出去吃饭走走，别太吵，少走路"
+    expected:
+      success: true
+      plan_has_activity: true
+      plan_has_restaurant: true
+      score_above: 50
+      companion_context_contains: ["family_with_elderly"]
+
+  - case_id: explicit_diet_goal
+    input: "最近减脂，想吃低卡健康餐，再散步一会"
+    expected:
+      success: true
+      plan_has_activity: true
+      plan_has_restaurant: true
+      score_above: 40
+      scenario_type_in: ["health_diet", "general_leisure"]
+
+  - case_id: neutral_default
+    input: "明天下午有空，帮我安排一下"
+    expected:
+      success: true
+      plan_has_activity: true
+      score_above: 40
+      should_not_assume: ["children", "spouse", "pet", "diet_goal"]
+
+  # ---- 异常 / 边界场景 ----
+
+  - case_id: retry_with_fallback
+    input: "想在家附近找一个不用预约的室内活动"
+    expected:
+      success: true
+      plan_has_activity: true
+      # 即使精确匹配少，也应能通过重试/fallback 生成方案
+      score_above: 30
+
+  - case_id: very_short_time
+    input: "只有1小时空档，想喝杯咖啡"
+    # 注意: 当前 seed 数据中活动最小 60min，1小时无法构建完整方案。
+    # 该用例主要验证 agent 不会 crash，且重试机制正常运作。
+    expected:
+      success: false  # 预期失败: 数据不支持极短时间
+      state_has_retries: true
+
+  - case_id: pet_friendly
+    input: "想带狗狗去喝咖啡，最好能坐一下午"
+    expected:
+      success: true
+      plan_has_activity: true
+      companion_context_contains: ["pet"]
+
+  - case_id: photo_spot_couple
+    input: "和对象找个适合拍照打卡的地方，下午去"
+    expected:
+      success: true
+      plan_has_activity: true
+      score_above: 45
+      companion_context_contains: ["couple"]
