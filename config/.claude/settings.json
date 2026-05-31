@@ -8,7 +8,8 @@
       "Read(//private/tmp/**)",
       "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\": [\"couple\"], \"time_window\": \"afternoon\", \"transportation\": \"transit\"}')",
       "Bash(python3 -m json.tool)",
-      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\": [\"couple\"], \"time_window\": \"afternoon\", \"transportation\": \"transit\", \"slot_answers\": {\"budget_level\": \"medium\", \"photo_spot\": true}}')"
+      "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\": [\"couple\"], \"time_window\": \"afternoon\", \"transportation\": \"transit\", \"slot_answers\": {\"budget_level\": \"medium\", \"photo_spot\": true}}')",
+      "Bash(git log *)"
     ]
   }
 }
