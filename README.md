@@ -327,6 +327,26 @@ execution_level:
 
 ## 如何运行项目
 
+### 0. 配置 API Key（使用 LLM 功能时需要）
+
+复制环境变量模板文件并填入你的 API Key：
+
+```bash
+cp .env.example .env
+```
+
+然后编辑 `.env` 文件，将 `DEEPSEEK_API_KEY` 替换为你的真实 Key：
+
+```env
+DEEPSEEK_API_KEY=sk-your-real-key-here
+```
+
+> ⚠️ **注意**：`.env` 已加入 `.gitignore`，不会被提交到 Git。请勿将 API Key 硬编码在代码中。
+
+获取 DeepSeek API Key: https://platform.deepseek.com/api_keys
+
+> 💡 项目默认使用 `mock_llm` 模式运行，无需 API Key 也可体验全部功能。只有需要使用真实 LLM 解析时才需配置。
+
 ### 1. 安装依赖
 
 ```bash
@@ -427,11 +447,22 @@ parsed_data = parse_request_llm(user_input)
 
 4. **配置 API Key**
 
-可以通过环境变量配置：
+推荐使用 `.env` 文件（项目启动时自动加载）：
 
 ```bash
-export OPENAI_API_KEY="your-api-key"
-streamlit run app.py
+# 复制模板文件
+cp .env.example .env
+# 编辑 .env，填入真实 Key
+```
+
+```env
+DEEPSEEK_API_KEY=sk-your-real-key-here
+```
+
+或者直接设置环境变量：
+
+```bash
+export DEEPSEEK_API_KEY="your-api-key"
 ```
 
 ## 后续如何接入真实 API
