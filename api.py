@@ -23,6 +23,12 @@ from pydantic import BaseModel, Field
 
 from agent_harness import run_agent, run_agent_plan_only
 from prompts import generate_followup_questions
+from orchestration import (
+    generate_template_cards,
+    select_card_and_lock,
+    check_skip_possible,
+)
+from receipt import generate_receipt
 
 
 app = FastAPI(title="Weekend Activity Agent API")
@@ -51,6 +57,7 @@ _sessions: Dict[str, Any] = {}
 class ChatRequest(BaseModel):
     message: str = Field(default="", max_length=500)
     structured_data: Optional[Dict[str, Any]] = None
+    locked_constraints: Optional[Dict[str, Any]] = None  # Round 2 锁定的约束
 
 
 class ExecuteRequest(BaseModel):
@@ -65,6 +72,32 @@ class FollowupRequest(BaseModel):
     slot_answers: Dict[str, Any] = Field(default_factory=dict)  # 累积的槽位答案 {slot_name: value}
 
 
+class TemplateCardsRequest(BaseModel):
+    """Round 1: 泛方案卡片生成请求"""
+    group_type: str = Field(default="", description="同行人类型（companion_context 内部格式）")
+    time_window: Optional[str] = Field(default=None, description="时间窗口（morning/afternoon/full_day）")
+    transportation: Optional[str] = Field(default=None, description="交通方式（driving/transit/taxi/bike_walk）")
+    selected_q_id: Optional[str] = Field(default=None, description="用户选择的小猜问 ID")
+    user_modifications: Optional[Dict[str, Any]] = Field(default=None, description="用户修改的槽位值")
+    additional_query: Optional[str] = Field(default=None, max_length=200, description="用户附加的自然语言输入（搜索词）")
+
+
+class SelectCardRequest(BaseModel):
+    """Round 2: 选择泛方案卡片请求"""
+    card_id: str = Field(description="选择的卡片 ID")
+    group_type: str = Field(default="", description="同行人类型")
+    current_slots: Dict[str, Any] = Field(default_factory=dict, description="当前已收集的槽位")
+    user_additional_input: Optional[str] = Field(default=None, max_length=200, description="用户附加输入")
+
+
+class ReceiptRequest(BaseModel):
+    """Round 4: 小票生成请求"""
+    plan_id: str = Field(description="已确认的方案 ID")
+    plan_data: Optional[Dict[str, Any]] = Field(default=None, description="方案完整数据")
+    locked_constraints: Optional[Dict[str, Any]] = Field(default=None, description="锁定的约束条件")
+    user_feedback: Optional[str] = Field(default=None, max_length=200, description="用户反馈")
+
+
 @app.get("/api/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
@@ -75,12 +108,27 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
     """
     生成活动方案（draft 阶段）。默认只规划不执行，返回方案供前端展示。
     用户确认后调用 /api/execute 执行。
+
+    支持 locked_constraints（来自 Round 2 选择卡片后锁定的约束），
+    会注入到搜索和评分逻辑中。
     """
     user_input = payload.message.strip()
 
     # 如果有结构化数据，合成自然语言消息
     if payload.structured_data and not user_input:
         user_input = _synthesize_message(payload.structured_data)
+
+    # 如果有 locked_constraints（来自 Round 2），合并到请求中
+    locked = payload.locked_constraints or {}
+    if payload.structured_data and payload.structured_data.get("locked_constraints"):
+        locked.update(payload.structured_data.get("locked_constraints") or {})
+
+    if not user_input and not locked:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    # 如果只有 locked_constraints 没有 message，合成消息
+    if not user_input and locked:
+        user_input = _synthesize_from_locked_constraints(locked)
 
     if not user_input:
         raise HTTPException(status_code=400, detail="message is required")
@@ -143,6 +191,80 @@ def suggest_followup(payload: FollowupRequest) -> Dict[str, Any]:
     }
     try:
         return generate_followup_questions(collected)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/template-cards")
+def template_cards(payload: TemplateCardsRequest) -> Dict[str, Any]:
+    """
+    Round 1: 生成三张泛方案卡片。
+
+    用户在点击小猜问后调用，根据已识别的同行人类型和偏好生成 3 张风格卡片，
+    作为最后一轮意图收敛——用户选择一张卡片后进入 Round 2 锁定约束。
+    """
+    if not payload.group_type:
+        raise HTTPException(status_code=400, detail="group_type is required")
+
+    # 检查是否可跳步
+    if payload.additional_query:
+        skip_check = check_skip_possible(payload.additional_query, {})
+        if skip_check.get("can_skip"):
+            return {
+                "round": 1,
+                "output_type": "template_cards",
+                "data": {
+                    "skipped": True,
+                    "skip_reason": skip_check.get("reason"),
+                    "target_round": skip_check.get("target_round"),
+                    "cards": [],
+                },
+                "note": "用户输入信息足够丰富，建议跳过泛方案卡片直接生成具体方案",
+            }
+
+    try:
+        # 组装完整的结构化槽位信息
+        structured_slots = {
+            "time_window": payload.time_window,
+            "transportation": payload.transportation,
+        }
+        result = generate_template_cards(
+            group_type=payload.group_type,
+            structured_slots=structured_slots,
+            user_modifications=payload.user_modifications,
+            additional_query=payload.additional_query,
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/select-card")
+def select_card(payload: SelectCardRequest) -> Dict[str, Any]:
+    """
+    Round 2: 用户选择泛方案卡片，锁定约束。
+
+    合并卡片隐含约束 + 已有槽位 + 用户附加输入，返回锁定的约束条件。
+    前端收到确认后应调用 /api/chat 触发具体方案生成（Round 3），
+    将 locked_constraints 通过 structured_data 或 locked_constraints 字段透传。
+    """
+    if not payload.card_id:
+        raise HTTPException(status_code=400, detail="card_id is required")
+
+    try:
+        result = select_card_and_lock(
+            card_id=payload.card_id,
+            group_type=payload.group_type,
+            current_slots=payload.current_slots,
+            user_additional_input=payload.user_additional_input,
+        )
+
+        # 缓存锁定约束供后续 /api/chat 使用
+        locked = result["data"].get("locked_constraints", {})
+        cache_key = f"locked_{payload.card_id}"
+        _sessions[cache_key] = locked
+
+        return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -220,6 +342,98 @@ def _synthesize_message(structured: Dict[str, Any]) -> str:
             parts.append("，".join(mod_parts))
 
     return "帮我在上海安排一个周末活动。" + "，".join(parts) + "。"
+
+
+def _synthesize_from_locked_constraints(locked: Dict[str, Any]) -> str:
+    """将 Round 2 锁定的约束合成为自然语言消息，用于 /api/chat 的 agent 输入。"""
+    parts = ["帮我在上海安排一个周末活动。"]
+
+    group_type = locked.get("group_type", "")
+    group_labels = {
+        "家庭出行": "家庭出行", "朋友聚会": "和朋友一起", "情侣约会": "情侣二人",
+        "独自一人": "一个人",
+    }
+    if group_type:
+        parts.append(group_labels.get(group_type, group_type))
+
+    time_slot = locked.get("time_slot", "")
+    time_labels = {"今天": "今天", "明天": "明天", "本周末": "本周末"}
+    if time_slot:
+        parts.append(time_labels.get(time_slot, time_slot))
+
+    mobility = locked.get("mobility", "")
+    mobility_labels = {"自驾": "自驾", "打车": "打车", "公共交通": "坐地铁"}
+    if mobility:
+        parts.append(mobility_labels.get(mobility, mobility))
+
+    child_age = locked.get("child_age")
+    if child_age:
+        parts.append(f"孩子{child_age}岁")
+
+    intent_mode = locked.get("intent_mode", "")
+    intent_labels = {
+        "relax": "轻松不累的", "interact": "互动参与感强的",
+        "novelty": "有点新鲜特别的", "explore": "探索体验的",
+        "romantic": "浪漫有氛围的", "dining": "以吃饭为主的",
+    }
+    if intent_mode:
+        parts.append(intent_labels.get(intent_mode, ""))
+
+    indoor_outdoor = locked.get("indoor_outdoor", "")
+    if indoor_outdoor == "indoor":
+        parts.append("室内活动")
+    elif indoor_outdoor == "outdoor":
+        parts.append("户外活动")
+
+    activity_intensity = locked.get("activity_intensity", "")
+    if activity_intensity == "low":
+        parts.append("轻松低强度")
+    elif activity_intensity == "medium":
+        parts.append("中等强度")
+
+    atmosphere = locked.get("atmosphere", "")
+    if atmosphere == "romantic":
+        parts.append("浪漫一点")
+    elif atmosphere == "quiet":
+        parts.append("安静一点")
+
+    budget = locked.get("budget", "")
+    budget_labels = {"low": "经济实惠", "medium": "中等预算", "high": "预算充足"}
+    if budget:
+        parts.append(budget_labels.get(budget, budget))
+
+    max_travel = locked.get("max_travel_time")
+    if max_travel:
+        parts.append(f"车程不超过{max_travel}分钟")
+
+    return "，".join(parts) + "。"
+
+
+@app.post("/api/receipt")
+def receipt(payload: ReceiptRequest) -> Dict[str, Any]:
+    """
+    Round 4: 生成小票卡片 + 分享语。
+
+    用户确认具体方案后调用，返回可视化小票卡片和可转发的分享文案。
+    """
+    plan_data = payload.plan_data
+    if not plan_data:
+        # 尝试从缓存获取
+        cached = _sessions.get(payload.plan_id, {})
+        plan_data = cached.get("best_plan") or cached
+
+    if not plan_data:
+        raise HTTPException(status_code=400, detail="plan_data is required or plan_id must be cached")
+
+    try:
+        result = generate_receipt(
+            plan=plan_data,
+            locked_constraints=payload.locked_constraints,
+            user_feedback=payload.user_feedback,
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---- SPA fallback: 非 /api 路径返回 index.html ----

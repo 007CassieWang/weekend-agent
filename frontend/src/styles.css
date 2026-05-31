@@ -960,6 +960,439 @@ button {
   transform: scale(0.97);
 }
 
+/* ==================== Share Button ==================== */
+
+.plan-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-plan-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 0;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #43a047, #66bb6a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.12s;
+  box-shadow: 0 4px 14px rgba(67, 160, 71, 0.28);
+}
+
+.share-plan-btn:hover {
+  opacity: 0.92;
+}
+
+.share-plan-btn:active {
+  transform: scale(0.97);
+}
+
+.share-plan-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.share-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==================== Receipt Card ==================== */
+
+.receipt-card {
+  width: 100%;
+  margin-top: 16px;
+  background: #fffef9;
+  border: 1.5px solid #f0e8cf;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 6px 24px rgba(27, 39, 43, 0.06);
+  animation: panel-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.receipt-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #e8dcb8;
+}
+
+.receipt-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.receipt-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 780;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.receipt-subtitle {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.receipt-summary {
+  background: #fafaf5;
+  border-radius: 14px;
+  padding: 2px 0;
+}
+
+.receipt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.receipt-row + .receipt-row {
+  border-top: 1px solid #f0eddf;
+}
+
+.receipt-row span {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.receipt-row strong {
+  font-size: 13px;
+  font-weight: 680;
+  color: var(--ink);
+  text-align: right;
+  max-width: 65%;
+  word-break: break-word;
+}
+
+.receipt-highlights,
+.receipt-status {
+  margin-top: 14px;
+}
+
+.receipt-highlights h4,
+.receipt-status h4,
+.receipt-share-text h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 760;
+  color: #555;
+}
+
+.receipt-highlight-item {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: #fffef6;
+  border: 1px solid #f2ebcf;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #5d4e37;
+  line-height: 1.4;
+}
+
+.receipt-highlight-item::before {
+  content: "· ";
+  font-weight: 800;
+  color: var(--accent-strong);
+}
+
+.receipt-status-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.receipt-status-key {
+  color: #999;
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.receipt-status-value {
+  color: #555;
+}
+
+/* Share text area */
+.receipt-share-text {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f0e8cf;
+}
+
+.receipt-share-text p {
+  margin: 0;
+  padding: 12px 14px;
+  background: #fafaf5;
+  border: 1px solid #ece6d2;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #424242;
+}
+
+.copy-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 7px 14px;
+  border: 1px solid #ddd6bc;
+  border-radius: 10px;
+  background: #fffef9;
+  color: #6d6d6d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.copy-share-btn:hover {
+  border-color: var(--accent-strong);
+  color: #5d4037;
+}
+
+/* Share action buttons */
+.receipt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f0e8cf;
+}
+
+.receipt-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 11px 0;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #43a047, #66bb6a);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.12s;
+  white-space: nowrap;
+}
+
+.receipt-action-btn:active {
+  transform: scale(0.96);
+}
+
+.receipt-action-btn.secondary {
+  background: #fffef9;
+  border: 1.5px solid #ddd6bc;
+  color: #6d6d6d;
+  font-weight: 650;
+}
+
+.receipt-action-btn.secondary:hover {
+  border-color: var(--accent-strong);
+}
+
+/* ==================== Template Cards (Round 1) ==================== */
+
+.template-cards-section {
+  animation: panel-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: 12px;
+}
+
+.template-cards-section h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 780;
+  color: var(--ink);
+}
+
+.template-subtitle {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.template-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-card {
+  position: relative;
+  width: 100%;
+  border: 2px solid #e8e4d8;
+  border-radius: 18px;
+  background: #fffef9;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  overflow: hidden;
+}
+
+.template-card:hover {
+  border-color: #d4c898;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.template-card:active {
+  transform: scale(0.98);
+}
+
+.template-card.selected {
+  border-color: var(--accent-strong);
+  background: #fffef0;
+  box-shadow: 0 4px 20px rgba(249, 168, 37, 0.18);
+}
+
+.template-card:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+.template-card:disabled:hover {
+  border-color: #e8e4d8;
+  box-shadow: none;
+  transform: none;
+}
+
+.template-card-title {
+  font-size: 17px;
+  font-weight: 780;
+  color: var(--ink);
+  margin-bottom: 6px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-card-recommend {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #f9a825, #f57f17);
+  border-radius: 999px;
+  line-height: 1.4;
+  flex-shrink: 0;
+  animation: check-pop 0.35s ease-out;
+}
+
+.template-card-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.45;
+}
+
+.template-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.template-card-chips em {
+  border: 1px solid #e6e3d4;
+  border-radius: 999px;
+  background: #fafaf5;
+  color: #777;
+  padding: 5px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-style: normal;
+}
+
+.template-card-example {
+  border-top: 1px solid #f0ead5;
+  padding-top: 10px;
+}
+
+.template-card-example span {
+  font-size: 11px;
+  color: #bbb;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.template-card-example p {
+  margin: 0;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.45;
+}
+
+.template-card-check {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  animation: check-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes check-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* Template cards loading skeleton */
+.template-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-loading-card {
+  display: block;
+  height: 100px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #f5f3ea, #fafaf5, #f5f3ea);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
 @media (max-width: 430px) {
   .app-shell {
     padding: 0;

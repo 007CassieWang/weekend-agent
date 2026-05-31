@@ -349,6 +349,9 @@ class AgentState:
     confirmation_status: str = "none"  # none | pending | confirmed | rejected
     confirmed_plan_id: Optional[str] = None
 
+    # Round 2 锁定约束（来自泛方案卡片选择）
+    locked_constraints: Dict[str, Any] = field(default_factory=dict)
+
     # 可观测性
     total_tokens: int = 0
     total_cost: float = 0.0

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { ChevronLeft, MessageCirclePlus, SendHorizontal } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, MessageCirclePlus, SendHorizontal, Share2, Copy, Check } from "lucide-react";
 
 const APP_NAME = "周末行程助手";
 
@@ -523,7 +523,63 @@ function MetaBox({ label: title, value }) {
   );
 }
 
-function PlanCard({ result }) {
+function TemplateCards({ cards, onSelect, loading, selectedId }) {
+  if (loading) {
+    return (
+      <div className="template-cards-section">
+        <h3>正在生成风格推荐...</h3>
+        <div className="template-loading">
+          <span className="template-loading-card" />
+          <span className="template-loading-card" />
+          <span className="template-loading-card" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!cards || cards.length === 0) return null;
+
+  return (
+    <div className="template-cards-section">
+      <h3>选一个你喜欢的风格吧</h3>
+      <p className="template-subtitle">我会根据你的选择锁定偏好，生成更精准的方案</p>
+      <div className="template-cards-grid">
+        {cards.map((card) => {
+          const isSelected = selectedId === card.card_id;
+          return (
+            <button
+              key={card.card_id}
+              className={`template-card${isSelected ? " selected" : ""}`}
+              type="button"
+              onClick={() => onSelect(card.card_id)}
+              disabled={!!selectedId}
+            >
+              <div className="template-card-title">
+                {card.title}
+                {card.recommended && <span className="template-card-recommend">推荐</span>}
+              </div>
+              <p className="template-card-desc">{card.description}</p>
+              <div className="template-card-chips">
+                {(card.tags || []).map((tag) => (
+                  <em key={tag}>{tag}</em>
+                ))}
+              </div>
+              {card.example_content && (
+                <div className="template-card-example">
+                  <span>例如</span>
+                  <p>{card.example_content}</p>
+                </div>
+              )}
+              {isSelected && <div className="template-card-check">✓</div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PlanCard({ result, onShare, shareLoading }) {
   const plan = result?.best_plan || {};
   const request = result?.request || {};
   const timeline = plan.timeline || [];
@@ -581,8 +637,134 @@ function PlanCard({ result }) {
       )}
 
       <p className="reason">{reason}</p>
+
+      <div className="plan-actions">
+        <button
+          className="share-plan-btn"
+          type="button"
+          onClick={onShare}
+          disabled={shareLoading}
+        >
+          {shareLoading ? (
+            <>
+              <span className="share-spinner" />
+              生成分享卡片中
+            </>
+          ) : (
+            <>
+              <Share2 size={16} strokeWidth={2.2} />
+              分享给朋友 / 转发家庭群
+            </>
+          )}
+        </button>
+      </div>
+
       <p className="mock-note">当前只生成方案和 Mock 执行结果，不会真实预约、支付或发消息。</p>
     </article>
+  );
+}
+
+function ReceiptCard({ receipt, shareText, actions }) {
+  const [copiedAction, setCopiedAction] = useState(null);
+
+  function handleCopy(text, actionLabel) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedAction(actionLabel);
+      setTimeout(() => setCopiedAction(null), 2000);
+    }).catch(() => {});
+  }
+
+  if (!receipt) return null;
+
+  const summary = receipt.summary || {};
+  const highlights = receipt.highlights || [];
+  const status = receipt.status || {};
+
+  return (
+    <div className="receipt-card">
+      <div className="receipt-header">
+        <span className="receipt-icon">🧾</span>
+        <div>
+          <h3>{receipt.title || "行程小票"}</h3>
+          <span className="receipt-subtitle">分享卡片 · 长按或点击下方按钮操作</span>
+        </div>
+      </div>
+
+      {/* 摘要 */}
+      <div className="receipt-summary">
+        {summary.time && <div className="receipt-row"><span>⏰ 时间</span><strong>{summary.time}</strong></div>}
+        {summary.group && <div className="receipt-row"><span>👥 同行</span><strong>{summary.group}</strong></div>}
+        {summary.activity && <div className="receipt-row"><span>🎯 活动</span><strong>{summary.activity}</strong></div>}
+        {summary.dining && <div className="receipt-row"><span>🍽️ 餐饮</span><strong>{summary.dining}</strong></div>}
+        {summary.mobility && <div className="receipt-row"><span>🚗 交通</span><strong>{summary.mobility}</strong></div>}
+        {summary.budget && <div className="receipt-row"><span>💰 预算</span><strong>{summary.budget}</strong></div>}
+      </div>
+
+      {/* 亮点 */}
+      {highlights.length > 0 && (
+        <div className="receipt-highlights">
+          <h4>✨ 亮点</h4>
+          {highlights.map((h, i) => (
+            <div className="receipt-highlight-item" key={i}>{h}</div>
+          ))}
+        </div>
+      )}
+
+      {/* 状态 */}
+      {Object.keys(status).length > 0 && (
+        <div className="receipt-status">
+          <h4>📋 备忘</h4>
+          {Object.entries(status).map(([key, value]) => (
+            <div className="receipt-status-item" key={key}>
+              <span className="receipt-status-key">{key}</span>
+              <span className="receipt-status-value">{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 分享语 */}
+      {shareText && (
+        <div className="receipt-share-text">
+          <h4>💬 分享语</h4>
+          <p>{shareText}</p>
+          <button
+            className="copy-share-btn"
+            type="button"
+            onClick={() => handleCopy(shareText, "copy")}
+          >
+            {copiedAction === "copy" ? (
+              <><Check size={14} /> 已复制</>
+            ) : (
+              <><Copy size={14} /> 复制分享语</>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* 分享操作 */}
+      {actions && actions.length > 0 && (
+        <div className="receipt-actions">
+          {actions.map((act) => (
+            <button
+              key={act.action}
+              className={`receipt-action-btn${act.action === "copy_text" ? " secondary" : ""}`}
+              type="button"
+              onClick={() => {
+                if (act.action === "copy_text") {
+                  handleCopy(act.text, act.label);
+                }
+              }}
+            >
+              {act.action === "share_to_wechat" && "💬 "}
+              {act.action === "share_to_family_group" && "👨‍👩‍👧 "}
+              {act.action === "copy_text" && (copiedAction === act.label ? <><Check size={14} /> 已复制</> : <><Copy size={14} /> {act.label}</>)}
+              {act.action !== "copy_text" && act.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -625,6 +807,11 @@ export default function App() {
   const [guessSentences, setGuessSentences] = useState([]); // [{text, slots: [{name, value}]}]
   const [accumulatedSlots, setAccumulatedSlots] = useState({}); // {slot_name: value}
   const [animatingSentence, setAnimatingSentence] = useState(null); // {text, startX, startY}
+  const [receiptLoadingIdx, setReceiptLoadingIdx] = useState(null); // which message index is loading receipt
+  const receiptCountRef = useRef(0);
+  const [templateCards, setTemplateCards] = useState([]); // Round 1: 泛方案卡片
+  const [templateCardsLoading, setTemplateCardsLoading] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState(null); // user selected card id
 
   function resetChat() {
     setMessages([]);
@@ -640,6 +827,8 @@ export default function App() {
     setGuessSentences([]);
     setAccumulatedSlots({});
     setAnimatingSentence(null);
+    setTemplateCards([]);
+    setSelectedCardId(null);
   }
 
   // ---- Slot selection handlers ----
@@ -741,12 +930,143 @@ export default function App() {
       });
     }
 
-    // After animation: append to draft, remove sentence from list
+    // After animation: append to draft, remove sentence (不立即拉卡片，等用户发送)
     setTimeout(() => {
       setDraft((prev) => (prev ? prev + "。" + sentence.text : sentence.text));
       setGuessSentences((prev) => prev.filter((s) => s.text !== sentence.text));
       setAnimatingSentence(null);
     }, 420);
+  }
+
+  async function fetchTemplateCards(composedMessage) {
+    setTemplateCardsLoading(true);
+    setError("");
+    const groupType = (slots.companion_context || [])[0] || "";
+
+    try {
+      const response = await fetch("/api/template-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          group_type: groupType,
+          time_window: slots.time_window || undefined,
+          transportation: slots.transportation || undefined,
+          user_modifications: accumulatedSlots,
+          additional_query: composedMessage || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "泛方案卡片加载失败");
+      }
+
+      const data = await response.json();
+      const cards = data?.data?.cards || [];
+      if (cards.length > 0) {
+        setTemplateCards(cards);
+        setStep("templates");
+        setSelectedCardId(null);
+      } else {
+        // 跳步：用户信息足够丰富，直接生成方案
+        setStep("result");
+        setTemplateCards([]);
+        submitWithCard(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "泛方案加载失败");
+    } finally {
+      setTemplateCardsLoading(false);
+    }
+  }
+
+  async function handleCardSelect(cardId) {
+    if (loading || !cardId) return;
+    setSelectedCardId(cardId);
+    // 给用户短暂视觉反馈后触发方案生成
+    setTimeout(() => submitWithCard(cardId), 300);
+  }
+
+  async function submitWithCard(cardId) {
+    setLoading(true);
+    setStep("result");
+    setTemplateCards([]);
+    setGuessSentences([]);
+    setError("");
+
+    const groupType = (slots.companion_context || [])[0] || "";
+    const currentSlots = {
+      group_type: groupType === "family_with_children" ? "家庭出行" :
+                   groupType === "family_with_elderly" ? "家庭出行" :
+                   groupType === "friends" ? "朋友聚会" :
+                   groupType === "colleagues" ? "朋友聚会" :
+                   groupType === "couple" ? "情侣约会" :
+                   groupType === "solo" ? "独自一人" : "独自一人",
+      time_slot: slots.time_window || "",
+      mobility: {
+        driving: "自驾", transit: "公共交通", taxi: "打车", bike_walk: "骑行/步行",
+      }[slots.transportation] || "",
+      ...accumulatedSlots,
+    };
+
+    const message = draft.trim();
+    if (message) {
+      setMessages((prev) => [...prev, { role: "user", content: message }]);
+    }
+    setDraft("");
+
+    let lockedConstraints = {};
+
+    // Round 2: 如果有 cardId，先调用 /api/select-card 锁定约束
+    if (cardId) {
+      try {
+        const selectRes = await fetch("/api/select-card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            card_id: cardId,
+            group_type: groupType,
+            current_slots: currentSlots,
+            user_additional_input: message || undefined,
+          }),
+        });
+
+        if (selectRes.ok) {
+          const selectData = await selectRes.json();
+          lockedConstraints = selectData?.data?.locked_constraints || {};
+        }
+      } catch {
+        // select-card 失败不阻塞，继续用已有槽位生成方案
+      }
+    } else {
+      // 没选卡片（跳步场景），直接用已有槽位
+      lockedConstraints = currentSlots;
+    }
+
+    // Round 3: 调用 /api/chat 生成具体方案
+    try {
+      const chatRes = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: message || "",
+          locked_constraints: lockedConstraints,
+        }),
+      });
+
+      if (!chatRes.ok) {
+        const detail = await chatRes.text();
+        throw new Error(detail || "方案生成失败");
+      }
+
+      const result = await chatRes.json();
+      setMessages((prev) => [...prev, { role: "agent", result }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "方案生成失败");
+    } finally {
+      setLoading(false);
+      setSelectedCardId(null);
+    }
   }
 
   async function handleFollowupSend(text) {
@@ -755,42 +1075,11 @@ export default function App() {
 
     setDraft("");
     setError("");
-    setLoading(true);
-    setStep("result");
     setGuessSentences([]);
-
     setMessages((prev) => [...prev, { role: "user", content: message }]);
 
-    const structuredData = {
-      companion_context: slots.companion_context,
-      time_window: slots.time_window,
-      transportation: slots.transportation,
-      context_modifiers: slots.context_modifiers,
-      slot_answers: accumulatedSlots,
-    };
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "",
-          structured_data: structuredData,
-        }),
-      });
-
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "请求失败");
-      }
-
-      const result = await response.json();
-      setMessages((prev) => [...prev, { role: "agent", result }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "请求失败");
-    } finally {
-      setLoading(false);
-    }
+    // 用户发送小猜问编辑后的文本 → 拉取泛方案卡片（Round 1）
+    fetchTemplateCards(message);
   }
 
   // ---- Free-text send (fallback / existing path) ----
@@ -828,10 +1117,58 @@ export default function App() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (step === "followup") {
+    if (step === "templates") {
+      // 用户在泛方案卡片阶段直接发送文字：跳过卡片选择，直接用文字生成方案
+      submitWithCard(null);
+    } else if (step === "followup") {
       handleFollowupSend(draft);
     } else {
       sendMessage(draft);
+    }
+  }
+
+  async function handleShare(msgIndex, result) {
+    if (receiptLoadingIdx !== null) return;
+
+    const planId = result?.plan_id || result?.best_plan?.plan_id || "";
+    const bestPlan = result?.best_plan || {};
+    const lockedConstraints = result?.request || {};
+
+    setReceiptLoadingIdx(msgIndex);
+
+    try {
+      const response = await fetch("/api/receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_id: planId,
+          plan_data: bestPlan,
+          locked_constraints: lockedConstraints,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "小票生成失败");
+      }
+
+      const receiptResult = await response.json();
+      const receiptData = receiptResult?.data || receiptResult;
+
+      setMessages((prev) => {
+        const next = [...prev];
+        if (next[msgIndex] && next[msgIndex].role === "agent") {
+          next[msgIndex] = {
+            ...next[msgIndex],
+            receipt: receiptData,
+          };
+        }
+        return next;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "小票生成失败");
+    } finally {
+      setReceiptLoadingIdx(null);
     }
   }
 
@@ -845,6 +1182,23 @@ export default function App() {
     setDraft(prompt);
     setStep("collecting");
   }
+
+  // Auto-scroll to receipt card when it appears
+  useEffect(() => {
+    const receiptCount = messages.filter((m) => m.role === "agent" && m.receipt).length;
+    if (receiptCount > receiptCountRef.current) {
+      receiptCountRef.current = receiptCount;
+      // Wait for DOM update, then scroll the receipt into view
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const receiptEl = document.querySelector(".receipt-card");
+          if (receiptEl) {
+            receiptEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      });
+    }
+  }, [messages]);
 
   // ---- Render ----
 
@@ -867,7 +1221,7 @@ export default function App() {
             />
           )}
 
-          {(step === "followup" || step === "result") && (
+          {(step === "followup" || step === "templates" || step === "result") && (
             <Q1Summary slots={slots} />
           )}
 
@@ -895,8 +1249,30 @@ export default function App() {
             message.role === "user" ? (
               <UserBubble key={`${message.role}-${index}`} content={message.content} />
             ) : (
-              <PlanCard key={`${message.role}-${index}`} result={message.result} />
+              <div key={`${message.role}-${index}`}>
+                <PlanCard
+                  result={message.result}
+                  onShare={() => handleShare(index, message.result)}
+                  shareLoading={receiptLoadingIdx === index}
+                />
+                {message.receipt && (
+                  <ReceiptCard
+                    receipt={message.receipt.receipt}
+                    shareText={message.receipt.share_text}
+                    actions={message.receipt.actions}
+                  />
+                )}
+              </div>
             ),
+          )}
+
+          {step === "templates" && (
+            <TemplateCards
+              cards={templateCards}
+              onSelect={handleCardSelect}
+              loading={templateCardsLoading}
+              selectedId={selectedCardId}
+            />
           )}
 
           {loading && (step === "result" || step === "followup") && <LoadingCard />}

@@ -18,7 +18,8 @@
       "Bash(curl -s -X POST http://localhost:8000/api/suggest-followup -H 'Content-Type: application/json' -d '{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"]}')",
       "Bash(curl -s -X POST http://localhost:8000/api/chat -H 'Content-Type: application/json' -d '{\"message\":\"\",\"structured_data\":{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"],\"slot_answers\":{\"我们一共几个人？\":\"3-5\",\"想吃啥菜系？\":\"hotpot\",\"人均预算多少？\":\"medium\"}}}')",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('success:', d['success']\\); print\\('title:', d['best_plan']['title']\\); print\\('request companion_context:', d['request'].get\\('companion_context'\\)\\); print\\('request context_modifiers:', d['request'].get\\('context_modifiers'\\)\\)\")",
-      "Bash(curl -s http://localhost:5173/src/styles.css)"
+      "Bash(curl -s http://localhost:5173/src/styles.css)",
+      "Bash(git add *)"
     ]
   }
 }

@@ -195,7 +195,8 @@ class WeekendActivityAgent:
 
     def complete_missing_slots(self, request: UserRequest) -> UserRequest:
         """
-        根据产品规则补全缺失信息
+        根据产品规则补全缺失信息。
+        优先使用 locked_constraints（Round 2 锁定约束）作为默认值来源。
 
         Args:
             request: 用户请求
@@ -208,6 +209,7 @@ class WeekendActivityAgent:
         defaults = self.product_rules.get("defaults", {})
         clarification = self.product_rules.get("clarification_rules", {})
         default_when_missing = clarification.get("default_when_missing", {})
+        locked = getattr(self.state, "locked_constraints", {}) or {}
 
         # 补全各个字段
         if not request.start_time:
@@ -246,6 +248,26 @@ class WeekendActivityAgent:
 
         if not request.distance_preference:
             request.distance_preference = "nearby"
+
+        # 应用 locked_constraints（Round 2 锁定约束）中的值
+        if locked:
+            if locked.get("travel_radius") == "short" and not request.distance_preference:
+                request.distance_preference = "nearby"
+            if locked.get("travel_radius") == "far":
+                request.distance_preference = "far"
+            if locked.get("budget") and not request.budget_level:
+                budget_map = {"low": BudgetLevel.LOW, "medium": BudgetLevel.MEDIUM, "high": BudgetLevel.HIGH}
+                if mapped := budget_map.get(locked["budget"]):
+                    request.budget_level = mapped
+            if locked.get("intent_mode") and not request.activity_preference:
+                intent_to_activity = {
+                    "relax": "relax", "interact": "entertainment", "novelty": "art",
+                    "explore": "outdoor", "romantic": "celebration", "dining": "food",
+                }
+                if activity := intent_to_activity.get(locked["intent_mode"]):
+                    request.activity_preference = activity
+            if locked.get("max_travel_time") and locked.get("max_travel_time", 0) < 30:
+                request.distance_preference = "nearby"
 
         self._log("complete_missing_slots", "信息补全完成", request.to_dict())
 
@@ -385,6 +407,7 @@ class WeekendActivityAgent:
 
         modifiers = set(request.context_modifiers or [])
         hard_constraints = set(request.hard_constraints or [])
+        locked = getattr(self.state, "locked_constraints", {}) or {}
 
         def rank(item: Any) -> tuple:
             item_type = getattr(item, "type", "")
@@ -403,6 +426,14 @@ class WeekendActivityAgent:
             preferred_rank = 0 if any(term in text for term in preferred) else 20
             label_penalty = 0
             label_bonus = 0
+
+            # locked_constraints 影响排序
+            if locked.get("indoor_outdoor") == "indoor" and getattr(item, "indoor_outdoor", "") == "outdoor":
+                label_penalty += 50
+            if locked.get("indoor_outdoor") == "outdoor" and getattr(item, "indoor_outdoor", "") == "indoor":
+                label_penalty += 20
+            if locked.get("activity_intensity") == "low" and getattr(item, "walking_load", "") == "high":
+                label_penalty += 40
 
             if "rainy_day" in modifiers and getattr(item, "indoor_outdoor", "") == "outdoor":
                 label_penalty += 45
@@ -1107,7 +1138,8 @@ class WeekendActivityAgent:
         self,
         user_input: str,
         user_confirmed: bool = True,
-        execute_mode: str = "full"  # "plan_only" | "full"
+        execute_mode: str = "full",  # "plan_only" | "full"
+        locked_constraints: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         运行 Agent 主流程。
@@ -1116,10 +1148,18 @@ class WeekendActivityAgent:
           - "plan_only": 只生成方案，不执行（draft 阶段）
           - "full": 生成方案后直接执行（commit 阶段，需 user_confirmed=True）
 
+        locked_constraints: Round 2 锁定的约束条件（来自泛方案卡片选择），
+          会注入到搜索过滤、默认值补全和评分逻辑中。
+
         内置 agentic feedback loop: 当搜索/构建结果不足时自动放宽约束重试。
         """
         self._log("run", "=" * 50)
         self._log("run", f"开始执行 Agent 主流程 (mode={execute_mode}, retries={self.state.max_retries})")
+
+        # 存储 locked_constraints 供后续步骤使用
+        self.state.locked_constraints = locked_constraints or {}
+        if self.state.locked_constraints:
+            self._log("run", f"使用锁定约束: {json.dumps(self.state.locked_constraints, ensure_ascii=False)}")
 
         try:
             # Step 1: 解析请求
@@ -1361,6 +1401,7 @@ def run_agent(
     user_input: str,
     user_confirmed: bool = True,
     execute_mode: str = "full",
+    locked_constraints: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     便捷函数：运行 Agent
@@ -1369,14 +1410,15 @@ def run_agent(
         user_input: 用户输入
         user_confirmed: 用户是否已确认（仅 execute_mode="full" 时生效）
         execute_mode: "plan_only" 仅生成方案 / "full" 生成并执行
+        locked_constraints: Round 2 锁定的约束条件
 
     Returns:
         执行结果
     """
     agent = WeekendActivityAgent()
-    return agent.run(user_input, user_confirmed=user_confirmed, execute_mode=execute_mode)
+    return agent.run(user_input, user_confirmed=user_confirmed, execute_mode=execute_mode, locked_constraints=locked_constraints)
 
 
-def run_agent_plan_only(user_input: str) -> Dict[str, Any]:
+def run_agent_plan_only(user_input: str, locked_constraints: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """便捷函数：仅生成方案（draft 阶段），返回方案等待用户确认。"""
-    return run_agent(user_input, user_confirmed=False, execute_mode="plan_only")
+    return run_agent(user_input, user_confirmed=False, execute_mode="plan_only", locked_constraints=locked_constraints)
