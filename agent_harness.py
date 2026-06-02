@@ -1329,7 +1329,8 @@ class WeekendActivityAgent:
                     "time": f"{item.start_time}-{item.end_time}",
                     "activity": item.activity,
                     "location": item.location,
-                    "type": item.type
+                    "type": item.type,
+                    "description": item.description,
                 }
                 for item in plan.timeline
             ],
@@ -1339,15 +1340,40 @@ class WeekendActivityAgent:
                     "name": a.name,
                     "type": a.type,
                     "child_friendly": a.child_friendly,
-                    "need_booking": a.need_booking
+                    "need_booking": a.need_booking,
+                    "location": {
+                        "name": a.location.name,
+                        "address": a.location.address,
+                        "district": a.location.district,
+                    } if a.location else None,
+                    "duration_minutes": a.suggested_duration_minutes,
+                    "tags": a.tags,
+                    "price_per_person": a.price_per_person,
                 }
                 for a in plan.activities
             ],
             "restaurant": {
                 "name": plan.restaurant.name,
                 "cuisine_type": plan.restaurant.cuisine_type,
-                "diet_friendly": plan.restaurant.diet_friendly
+                "diet_friendly": plan.restaurant.diet_friendly,
+                "location": {
+                    "name": plan.restaurant.location.name,
+                    "address": plan.restaurant.location.address,
+                    "district": plan.restaurant.location.district,
+                } if plan.restaurant.location else None,
+                "price_per_person": plan.restaurant.price_per_person,
             } if plan.restaurant else None,
+            "route_infos": [
+                {
+                    "from": ri.from_location.name if ri.from_location else "",
+                    "to": ri.to_location.name if ri.to_location else "",
+                    "travel_minutes": ri.travel_minutes,
+                    "distance_km": ri.distance_km,
+                    "transportation": ri.transportation,
+                    "traffic_condition": ri.traffic_condition,
+                }
+                for ri in (plan.route_infos or [])
+            ],
             "score": plan.score,
             "score_breakdown": plan.score_breakdown.to_dict(),
             "risks": plan.risks,

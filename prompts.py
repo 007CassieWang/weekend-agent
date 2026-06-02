@@ -327,9 +327,11 @@ def generate_followup_questions(collected_slots: Dict[str, Any]) -> Dict[str, An
 
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
-        result = _generate_guess_sentences_mock(collected_slots)
-        result["completeness"] = _estimate_completeness(collected_slots, {})
-        return result
+        sentences = _generate_guess_sentences_mock(collected_slots)
+        return {
+            "sentences": sentences,
+            "completeness": _estimate_completeness(collected_slots, sentences),
+        }
 
     companion_labels = {
         "solo": "独自出行", "couple": "情侣出行", "friends": "朋友出行",

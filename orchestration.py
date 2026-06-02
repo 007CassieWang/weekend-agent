@@ -311,6 +311,166 @@ def _map_group_type_to_card_key(group_type: str) -> str:
     return mapping.get(group_type, "独自一人")
 
 
+# ==================== Round 1: 卡片 tag 小红书化 ====================
+
+# 槽位 → 小红书风格短词候选表。每个槽位提供 2-3 个措辞，按卡片顺序轮换避免雷同。
+_SLOT_TO_PHRASES: Dict[str, Dict[Any, List[str]]] = {
+    "time_window": {
+        "morning": ["早起党专属", "上午人少", "一早就开门"],
+        "afternoon": ["午后刚好", "下午茶时段", "下午黄金档"],
+        "now": ["现在就冲", "说走就走"],
+        "full_day": ["泡一整天", "全天不赶"],
+    },
+    "transportation": {
+        "driving": ["自驾友好", "开车直达", "导航就到"],
+        "transit": ["地铁直达", "出站就到", "公交方便"],
+        "taxi": ["打车10分钟", "下车就是"],
+        "bike_walk": ["走着就到", "骑车很顺"],
+    },
+    "parking_needed": {True: ["好停车不用愁", "停车直达", "车位很稳"]},
+    "near_subway": {True: ["近地铁", "地铁口就在", "出站5分钟"]},
+    "child_age": {
+        "0-3": ["奶娃友好", "推车无障碍", "小宝可冲"],
+        "4-6": ["遛娃神地", "小朋友玩疯", "学龄前完美"],
+        "7-12": ["小学娃天堂", "大娃也爱", "能放手玩"],
+        "12+": ["青少年都爱"],
+    },
+    "parent_child": {True: ["亲子绝配", "宝藏遛娃地", "带娃首选"]},
+    "low_energy": {True: ["佛系不折腾", "躺平友好", "不赶节奏"]},
+    "photo_spot": {True: ["出片绝了", "随手出大片", "镜头不踩雷"]},
+    "atmosphere": {
+        "romantic": ["氛围拉满", "约会神地", "心动局"],
+        "quiet": ["安静私藏", "不被打扰", "岁月静好"],
+        "lively": ["氛围在线", "热闹起来", "场子拉满"],
+    },
+    "pet_allowed": {True: ["带毛孩子绝配", "宠物友好", "狗狗能进"]},
+    "budget_level": {
+        "low": ["白菜价能打", "性价比拉满", "钱包零压力"],
+        "medium": ["人均100+", "不贵能吃饱", "日常局合适"],
+        "medium_high": ["人均200随便点", "200档稳", "舍得吃"],
+        "high": ["人均300+ 值", "高消享受", "体验值回"],
+    },
+    "cuisine_type": {
+        "hotpot": ["火锅yyds", "火锅局必备"],
+        "japanese": ["日料天花板", "日料真香"],
+        "cantonese": ["粤菜真香", "粤味地道"],
+        "western": ["西餐氛围正", "西餐拿捏"],
+        "bbq": ["烧烤局必备", "撸串绝配"],
+    },
+    "food_preference": {
+        "healthy": ["健康轻食", "沙拉绝绝子", "轻食友好"],
+        "hotpot": ["火锅yyds", "火锅局必备"],
+        "japanese": ["日料天花板", "日料真香"],
+        "cantonese": ["粤菜真香", "粤味地道"],
+        "western": ["西餐氛围正", "西餐拿捏"],
+        "bbq": ["烧烤局必备", "撸串绝配"],
+    },
+    "people_count": {
+        1: ["一个人也美"],
+        2: ["两人刚好", "二人局舒服"],
+        "3-5": ["小团出行", "几个人刚好"],
+        "6+": ["团建神地", "大局开包", "人多也镇得住"],
+    },
+}
+
+# 显示在卡片上的槽位优先级：用户主动通过小猜问选过的偏好排前面，
+# 结构化的时间/交通排后面，确保用户最关心的事实先被看到。
+_TAG_SLOT_PRIORITY = [
+    "photo_spot",
+    "atmosphere",
+    "child_age",
+    "parent_child",
+    "low_energy",
+    "pet_allowed",
+    "budget_level",
+    "cuisine_type",
+    "food_preference",
+    "people_count",
+    "time_window",
+    "transportation",
+    "parking_needed",
+    "near_subway",
+]
+
+
+def _has_overlap(tag: str, haystack: str, min_len: int = 2) -> bool:
+    """tag 的任意 min_len 字窗口出现在 haystack 中即视为重复。"""
+    if not tag or not haystack or len(tag) < min_len:
+        return False
+    for i in range(len(tag) - min_len + 1):
+        if tag[i:i + min_len] in haystack:
+            return True
+    return False
+
+
+def _derive_xhs_tags(
+    card: Dict[str, Any],
+    idx: int,
+    structured_slots: Dict[str, Any],
+    user_modifications: Dict[str, Any],
+    used_phrases: Optional[set] = None,
+    max_tags: int = 3,
+) -> List[str]:
+    """
+    根据用户已提供的槽位事实，为单张卡片生成 3 个小红书风格 tag。
+
+    规则：
+    - 仅使用用户实际给出的槽位（Q1 + 小猜问）
+    - driving 自动派生 parking_needed，transit 自动派生 near_subway
+    - 同槽位对不同卡片优先用候选表里没用过的措辞，避免三卡雷同
+    - 过滤掉与 title / description / example_content 有 2 字以上重叠的措辞
+    - 过滤掉与已选 tag 有 2 字以上重叠的措辞，避免一张卡内部重复
+    - 不足 2 个时回退到 card["tags"]，避免空 chips
+    """
+    if used_phrases is None:
+        used_phrases = set()
+
+    facts: Dict[str, Any] = {}
+    for slot in ("time_window", "transportation"):
+        v = (structured_slots or {}).get(slot)
+        if v:
+            facts[slot] = v
+    if facts.get("transportation") == "driving":
+        facts.setdefault("parking_needed", True)
+    if facts.get("transportation") == "transit":
+        facts.setdefault("near_subway", True)
+    for k, v in (user_modifications or {}).items():
+        if v is None or v == "" or v == [] or v == {}:
+            continue
+        facts[k] = v
+
+    haystack = " ".join(filter(None, [
+        card.get("title", ""),
+        card.get("description", ""),
+        card.get("example_content", ""),
+    ]))
+
+    chosen: List[str] = []
+    for slot in _TAG_SLOT_PRIORITY:
+        if slot not in facts:
+            continue
+        value = facts[slot]
+        candidates = _SLOT_TO_PHRASES.get(slot, {}).get(value)
+        if not candidates:
+            continue
+        avail = [c for c in candidates if not _has_overlap(c, haystack)]
+        avail = [c for c in avail if not any(_has_overlap(c, t) for t in chosen)]
+        if not avail:
+            continue
+        # 优先选其他卡片还没用过的措辞，让三张卡 tags 不雷同
+        unused = [c for c in avail if c not in used_phrases]
+        pick_pool = unused if unused else avail
+        tag = pick_pool[idx % len(pick_pool)]
+        chosen.append(tag)
+        used_phrases.add(tag)
+        if len(chosen) >= max_tags:
+            break
+
+    if len(chosen) < 2:
+        return card.get("tags", [])
+    return chosen
+
+
 def generate_template_cards(
     group_type: str,
     user_modifications: Optional[Dict[str, Any]] = None,
@@ -347,6 +507,11 @@ def generate_template_cards(
     # 给排名第一的卡片加上推荐标记
     if cards:
         cards[0]["recommended"] = True
+
+    # 用用户实际提供的槽位生成小红书风格 tag，覆盖原硬编码 tags
+    used_phrases: set = set()
+    for idx, card in enumerate(cards):
+        card["tags"] = _derive_xhs_tags(card, idx, slots, mods, used_phrases=used_phrases)
 
     return {
         "round": 1,

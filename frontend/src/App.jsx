@@ -101,6 +101,113 @@ function getDurationText(minutes) {
   return `${rest}分钟`;
 }
 
+const TRANSPORT_INFO = {
+  driving: { icon: "🚗", label: "驾车" },
+  transit: { icon: "🚇", label: "地铁/公交" },
+  taxi: { icon: "🚕", label: "打车" },
+  bike_walk: { icon: "🚶", label: "骑行/步行" },
+};
+
+const STOP_TYPE_META = {
+  activity: { icon: "📍", badge: "活动", badgeClass: "badge-activity" },
+  meal: { icon: "🍽️", badge: "餐饮", badgeClass: "badge-meal" },
+};
+
+/**
+ * 从 timeline / route_infos 中构建展示用的行程站点列表。
+ * 每个站点包含：名称、地点、时间、标签、到达该站的通勤信息。
+ */
+function buildRouteStops(plan, request) {
+  const timeline = plan.timeline || [];
+  const activities = plan.activities || [];
+  const restaurant = plan.restaurant;
+  const routeInfos = plan.route_infos || [];
+  const transportMode = request?.transportation || "driving";
+
+  // 先收集所有 activity/meal 类型的站点
+  const rawStops = [];
+  for (let i = 0; i < timeline.length; i++) {
+    const item = timeline[i];
+    if (item.type !== "activity" && item.type !== "meal") continue;
+    rawStops.push({ ...item, _idx: i });
+  }
+
+  if (rawStops.length === 0) return [];
+
+  const stops = rawStops.map((item, stopIndex) => {
+    const isActivity = item.type === "activity";
+    const isMeal = item.type === "meal";
+    const [startTime, endTime] = (item.time || "").split("-");
+
+    // 匹配活动/餐厅的富数据
+    let enriched = {};
+    if (isActivity) {
+      const matched = activities.find(
+        (a) => item.activity.includes(a.name) || a.name.includes(item.activity),
+      );
+      if (matched) {
+        enriched = {
+          tags: matched.tags || [],
+          childFriendly: matched.child_friendly,
+          needBooking: matched.need_booking,
+          locationDetail: matched.location,
+          durationMinutes: matched.duration_minutes,
+          pricePerPerson: matched.price_per_person,
+        };
+      }
+    } else if (isMeal && restaurant) {
+      enriched = {
+        cuisineType: restaurant.cuisine_type,
+        locationDetail: restaurant.location,
+        pricePerPerson: restaurant.price_per_person,
+        tags: [],
+      };
+    }
+
+    // 通勤信息：第一个站点无 commute，后续站点从 route_infos 中匹配
+    let commute = null;
+    if (stopIndex > 0 && routeInfos.length > 0) {
+      // route_infos 结构: [home→act1, act1→act2?, last_act→restaurant, restaurant→home]
+      // 站点间通勤对应 route_infos 的第 stopIndex 项（当只有一个活动时）
+      // 或从 route_infos 中找 "to" 匹配本站 location 的条目
+      const route = routeInfos.find(
+        (r) => r.to === item.location || (item.location && item.location.includes(r.to)),
+      );
+      if (route) {
+        commute = {
+          travelMinutes: route.travel_minutes,
+          distanceKm: route.distance_km,
+          transportation: transportMode,
+        };
+      } else {
+        // fallback：从 timeline 中取前一个 travel 项的耗时
+        const prevItem = timeline[item._idx - 1];
+        if (prevItem && prevItem.type === "travel") {
+          const match = (prevItem.description || prevItem.activity || "").match(/(\d+)/);
+          commute = {
+            travelMinutes: match ? parseInt(match[1], 10) : null,
+            distanceKm: null,
+            transportation: transportMode,
+          };
+        }
+      }
+    }
+
+    return {
+      type: item.type,
+      name: isMeal && restaurant ? restaurant.name : item.activity,
+      rawActivity: item.activity,
+      location: item.location,
+      startTime,
+      endTime,
+      commute,
+      ...enriched,
+    };
+  });
+
+  return stops;
+}
+
 function getNowText() {
   return new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
@@ -582,7 +689,6 @@ function TemplateCards({ cards, onSelect, loading, selectedId }) {
 function PlanCard({ result, onShare, shareLoading }) {
   const plan = result?.best_plan || {};
   const request = result?.request || {};
-  const timeline = plan.timeline || [];
   const companion = (request.companion_context || []).map(label).join("、") || label(request.companions);
   const intent = label(request.primary_intent || request.scenario_type || "mixed_plan");
   const chips = [
@@ -592,14 +698,15 @@ function PlanCard({ result, onShare, shareLoading }) {
   ]
     .filter(Boolean)
     .slice(0, 8);
-  const activity = plan.activities?.[0]?.name || "待推荐";
-  const restaurant = plan.restaurant?.name || "按附近合适餐饮补充";
   const reason = plan.recommendation_reason || "按你的时间、预算、距离和偏好综合排序。";
+
+  const stops = useMemo(() => buildRouteStops(plan, request), [plan, request]);
+  const transportInfo = TRANSPORT_INFO[request.transportation] || TRANSPORT_INFO.driving;
 
   return (
     <article className="plan-card">
       <div className="card-label">推荐方案</div>
-      <p className="card-intro">我按你的需求整理了一个可执行方案，可以直接按下面的时间线走。</p>
+      <p className="card-intro">我按你的需求整理了一个可执行方案，可以直接按下面的路线走。</p>
       <h2>{plan.title || "本地生活行程方案"}</h2>
 
       <div className="meta-grid">
@@ -609,24 +716,100 @@ function PlanCard({ result, onShare, shareLoading }) {
         <MetaBox label="匹配分" value={typeof plan.score === "number" ? plan.score.toFixed(1) : "待计算"} />
       </div>
 
-      <h3>核心安排</h3>
-      <div className="meta-grid">
-        <MetaBox label="活动" value={activity} />
-        <MetaBox label="餐饮" value={restaurant} />
-      </div>
+      {stops.length > 0 && (
+        <>
+          <h3>行程路线</h3>
+          <div className="route-section">
+            {stops.map((stop, idx) => {
+              const meta = STOP_TYPE_META[stop.type] || STOP_TYPE_META.activity;
+              const isFirst = idx === 0;
+              const isLast = idx === stops.length - 1;
 
-      <h3>时间线</h3>
-      <div className="timeline">
-        {timeline.map((item, index) => (
-          <div className="timeline-row" key={`${item.time}-${item.activity}-${index}`}>
-            <div className="timeline-time">{item.time}</div>
-            <div>
-              <strong>{item.activity}</strong>
-              <span>{item.location}</span>
-            </div>
+              return (
+                <div key={`${stop.name}-${idx}`} className="route-stop-group">
+                  {/* 通勤连接线（第一个站点不显示） */}
+                  {!isFirst && stop.commute && (
+                    <div className="commute-connector">
+                      <div className="commute-line" />
+                      <div className="commute-info">
+                        <span className="commute-icon">{transportInfo.icon}</span>
+                        <span className="commute-label">{transportInfo.label}</span>
+                        {stop.commute.travelMinutes && (
+                          <span className="commute-time">约{stop.commute.travelMinutes}分钟</span>
+                        )}
+                      </div>
+                      <div className="commute-line" />
+                    </div>
+                  )}
+
+                  {/* 地点卡片 */}
+                  <div className={`location-card ${isLast ? "location-card-last" : ""}`}>
+                    <div className="location-card-header">
+                      <span className="location-icon">{meta.icon}</span>
+                      <div className="location-title-row">
+                        <strong className="location-name">{stop.name}</strong>
+                        <span className={`location-badge ${meta.badgeClass}`}>{meta.badge}</span>
+                      </div>
+                    </div>
+
+                    <div className="location-card-body">
+                      {/* 时间 */}
+                      {stop.startTime && (
+                        <div className="location-detail">
+                          <span className="location-detail-icon">🕐</span>
+                          <span>
+                            {stop.startTime}
+                            {stop.endTime && stop.endTime !== stop.startTime ? ` - ${stop.endTime}` : ""}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 地址 */}
+                      {stop.locationDetail?.address && (
+                        <div className="location-detail">
+                          <span className="location-detail-icon">📌</span>
+                          <span>
+                            {stop.locationDetail.district
+                              ? `${stop.locationDetail.district} `
+                              : ""}
+                            {stop.locationDetail.address || stop.location}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 标签行 */}
+                      {(stop.cuisineType || stop.childFriendly || stop.needBooking || (stop.tags && stop.tags.length > 0)) && (
+                        <div className="location-tags">
+                          {stop.cuisineType && (
+                            <em className="location-tag tag-cuisine">{stop.cuisineType}</em>
+                          )}
+                          {stop.childFriendly && (
+                            <em className="location-tag tag-friendly">亲子友好</em>
+                          )}
+                          {stop.needBooking && (
+                            <em className="location-tag tag-booking">需预约</em>
+                          )}
+                          {(stop.tags || []).slice(0, 2).map((tag) => (
+                            <em key={tag} className="location-tag">{tag}</em>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 人均价格 */}
+                      {stop.pricePerPerson > 0 && (
+                        <div className="location-detail">
+                          <span className="location-detail-icon">💰</span>
+                          <span>人均 ¥{stop.pricePerPerson}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {chips.length > 0 && (
         <div className="chips">
