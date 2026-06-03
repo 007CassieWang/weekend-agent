@@ -12,11 +12,6 @@ const GUESS_CARDS = [
     suffix: "，这周末是花期尾巴了，想拍照的要抓紧。走走停停刚好半天，旁边吃饭也方便。",
     chips: ["户外散心", "拍照打卡", "半天刚好"],
     prompt: "想在上海安排一个周末半天的户外散心行程，最好能拍照，走走停停不要太累",
-    impliedConstraints: {
-      poi_category_filter: ["户外休闲.公园"],
-      companion_context_candidates: ["solo", "couple", "family_with_children", "friends"],
-      context_modifiers: ["weather_dependent", "photo_spot"],
-    },
   },
   {
     primaryIntent: "meal",
@@ -26,11 +21,6 @@ const GUESS_CARDS = [
     suffix: "，上个月刚上榜，趁现在还没太火可以先去。人均200左右，周末值得。",
     chips: ["吃顿好的", "新上榜", "适合约饭"],
     prompt: "想在上海周末吃顿好的，人均200左右，可以安排一顿适合约饭的餐厅",
-    impliedConstraints: {
-      poi_category_filter: ["美食.粤菜"],
-      companion_context_candidates: ["couple", "friends", "solo"],
-      context_modifiers: ["high_budget"],
-    },
   },
   {
     primaryIntent: "culture_experience",
@@ -40,11 +30,6 @@ const GUESS_CARDS = [
     suffix: "，展不大但很出片，逛完旁边就是番禺路咖啡街，适合放松。",
     chips: ["看展", "低体力", "咖啡顺路"],
     prompt: "想在上海安排一个轻松看展行程，低体力、适合拍照，最好附近还能喝咖啡",
-    impliedConstraints: {
-      poi_category_filter: ["文化体验.展览"],
-      companion_context_candidates: ["solo", "couple", "friends"],
-      context_modifiers: ["photo_spot", "low_energy"],
-    },
   },
 ];
 
@@ -121,6 +106,7 @@ function buildRouteStops(plan, request) {
   const timeline = plan.timeline || [];
   const activities = plan.activities || [];
   const restaurant = plan.restaurant;
+  const dinnerRestaurant = plan.dinner_restaurant;
   const routeInfos = plan.route_infos || [];
   const transportMode = request?.transportation || "driving";
 
@@ -134,6 +120,12 @@ function buildRouteStops(plan, request) {
 
   if (rawStops.length === 0) return [];
 
+  // 构建 route_infos 的 O(1) 查找表，避免每个站点重复 .find() 扫描
+  const routeByTo = new Map();
+  for (const r of routeInfos) {
+    if (r.to) routeByTo.set(r.to, r);
+  }
+
   const stops = rawStops.map((item, stopIndex) => {
     const isActivity = item.type === "activity";
     const isMeal = item.type === "meal";
@@ -141,10 +133,11 @@ function buildRouteStops(plan, request) {
 
     // 匹配活动/餐厅的富数据
     let enriched = {};
+    let matchedRestaurant = null;  // 提升作用域，供 return 中的 name 使用
     if (isActivity) {
-      const matched = activities.find(
-        (a) => item.activity.includes(a.name) || a.name.includes(item.activity),
-      );
+      // 精确匹配优先，避免"来福士广场"匹配到"上海来福士广场"
+      const matched = activities.find((a) => item.activity === a.name)
+        || activities.find((a) => item.activity.includes(a.name) || a.name.includes(item.activity));
       if (matched) {
         enriched = {
           tags: matched.tags || [],
@@ -155,13 +148,27 @@ function buildRouteStops(plan, request) {
           pricePerPerson: matched.price_per_person,
         };
       }
-    } else if (isMeal && restaurant) {
-      enriched = {
-        cuisineType: restaurant.cuisine_type,
-        locationDetail: restaurant.location,
-        pricePerPerson: restaurant.price_per_person,
-        tags: [],
-      };
+    } else if (isMeal) {
+      // 匹配午餐或晚餐餐厅：按"午餐"/"晚餐"关键词精准路由
+      const isLunch = item.activity.includes("午餐");
+      const isDinner = item.activity.includes("晚餐");
+
+      if (isLunch && restaurant) {
+        matchedRestaurant = restaurant;
+      } else if (isDinner && dinnerRestaurant) {
+        matchedRestaurant = dinnerRestaurant;
+      } else if (restaurant && (item.activity.includes(restaurant.name) || (restaurant.location?.name && item.location === restaurant.location.name))) {
+        // 兜底：非午/晚餐的用餐（如"用餐"标记），用主餐厅
+        matchedRestaurant = restaurant;
+      }
+      if (matchedRestaurant) {
+        enriched = {
+          cuisineType: matchedRestaurant.cuisine_type,
+          locationDetail: matchedRestaurant.location,
+          pricePerPerson: matchedRestaurant.price_per_person,
+          tags: [],
+        };
+      }
     }
 
     // 通勤信息：第一个站点无 commute，后续站点从 route_infos 中匹配
@@ -169,10 +176,14 @@ function buildRouteStops(plan, request) {
     if (stopIndex > 0 && routeInfos.length > 0) {
       // route_infos 结构: [home→act1, act1→act2?, last_act→restaurant, restaurant→home]
       // 站点间通勤对应 route_infos 的第 stopIndex 项（当只有一个活动时）
-      // 或从 route_infos 中找 "to" 匹配本站 location 的条目
-      const route = routeInfos.find(
-        (r) => r.to === item.location || (item.location && item.location.includes(r.to)),
-      );
+      // 从 route_infos 查找表中 O(1) 匹配本站 location
+      let route = routeByTo.get(item.location);
+      if (!route && item.location) {
+        // 宽松匹配：location 包含 route key
+        for (const [to, r] of routeByTo) {
+          if (item.location.includes(to)) { route = r; break; }
+        }
+      }
       if (route) {
         commute = {
           travelMinutes: route.travel_minutes,
@@ -195,7 +206,7 @@ function buildRouteStops(plan, request) {
 
     return {
       type: item.type,
-      name: isMeal && restaurant ? restaurant.name : item.activity,
+      name: isMeal && matchedRestaurant ? matchedRestaurant.name : (isMeal && restaurant ? restaurant.name : item.activity),
       rawActivity: item.activity,
       location: item.location,
       startTime,
@@ -380,10 +391,16 @@ function StatusBar() {
   );
 }
 
-function Header({ onReset }) {
+function Header({ onReset, onBack, canGoBack }) {
   return (
     <header className="phone-header">
-      <button className="icon-button" type="button" aria-label="返回">
+      <button
+        className="icon-button"
+        type="button"
+        aria-label="返回"
+        onClick={canGoBack ? onBack : undefined}
+        style={{ opacity: canGoBack ? 1 : 0.3, cursor: canGoBack ? "pointer" : "default" }}
+      >
         <ChevronLeft size={24} strokeWidth={2.5} />
       </button>
       <div className="header-title">
@@ -691,13 +708,17 @@ function PlanCard({ result, onShare, shareLoading }) {
   const request = result?.request || {};
   const companion = (request.companion_context || []).map(label).join("、") || label(request.companions);
   const intent = label(request.primary_intent || request.scenario_type || "mixed_plan");
-  const chips = [
-    ...(request.context_modifiers || []),
-    ...(request.hard_constraints || []),
-    ...(request.soft_preferences || []),
-  ]
-    .filter(Boolean)
-    .slice(0, 8);
+  const chips = useMemo(
+    () =>
+      [
+        ...(request.context_modifiers || []),
+        ...(request.hard_constraints || []),
+        ...(request.soft_preferences || []),
+      ]
+        .filter(Boolean)
+        .slice(0, 8),
+    [request.context_modifiers, request.hard_constraints, request.soft_preferences],
+  );
   const reason = plan.recommendation_reason || "按你的时间、预算、距离和偏好综合排序。";
 
   const stops = useMemo(() => buildRouteStops(plan, request), [plan, request]);
@@ -847,7 +868,7 @@ function PlanCard({ result, onShare, shareLoading }) {
   );
 }
 
-function ReceiptCard({ receipt, shareText, actions }) {
+function ReceiptCard({ receipt, shareText, actions, onClose }) {
   const [copiedAction, setCopiedAction] = useState(null);
 
   function handleCopy(text, actionLabel) {
@@ -865,6 +886,13 @@ function ReceiptCard({ receipt, shareText, actions }) {
 
   return (
     <div className="receipt-card">
+      {/* 关闭按钮 */}
+      {onClose && (
+        <button className="receipt-close-btn" type="button" onClick={onClose} aria-label="关闭">
+          ✕
+        </button>
+      )}
+
       <div className="receipt-header">
         <span className="receipt-icon">🧾</span>
         <div>
@@ -911,17 +939,6 @@ function ReceiptCard({ receipt, shareText, actions }) {
         <div className="receipt-share-text">
           <h4>💬 分享语</h4>
           <p>{shareText}</p>
-          <button
-            className="copy-share-btn"
-            type="button"
-            onClick={() => handleCopy(shareText, "copy")}
-          >
-            {copiedAction === "copy" ? (
-              <><Check size={14} /> 已复制</>
-            ) : (
-              <><Copy size={14} /> 复制分享语</>
-            )}
-          </button>
         </div>
       )}
 
@@ -931,22 +948,38 @@ function ReceiptCard({ receipt, shareText, actions }) {
           {actions.map((act) => (
             <button
               key={act.action}
-              className={`receipt-action-btn${act.action === "copy_text" ? " secondary" : ""}`}
+              className={`receipt-action-btn${act.action === "copy_link" ? " secondary" : ""}`}
               type="button"
               onClick={() => {
-                if (act.action === "copy_text") {
+                if (act.action === "copy_link" || act.action === "copy_text") {
                   handleCopy(act.text, act.label);
                 }
               }}
             >
               {act.action === "share_to_wechat" && "💬 "}
-              {act.action === "share_to_family_group" && "👨‍👩‍👧 "}
-              {act.action === "copy_text" && (copiedAction === act.label ? <><Check size={14} /> 已复制</> : <><Copy size={14} /> {act.label}</>)}
-              {act.action !== "copy_text" && act.label}
+              {act.action === "copy_link" && (copiedAction === act.label ? <><Check size={14} /> 已复制</> : <><Copy size={14} /> {act.label}</>)}
+              {(act.action !== "copy_link" && act.action !== "copy_text") && act.label}
             </button>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ReceiptOverlay({ data, onClose }) {
+  if (!data) return null;
+
+  return (
+    <div className="receipt-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="receipt-overlay-inner">
+        <ReceiptCard
+          receipt={data.receipt}
+          shareText={data.shareText}
+          actions={data.actions}
+          onClose={onClose}
+        />
+      </div>
     </div>
   );
 }
@@ -980,6 +1013,10 @@ export default function App() {
 
   // Structured input flow state
   const [step, setStep] = useState("idle"); // idle | collecting | followup | result
+  const [stepHistory, setStepHistory] = useState([]); // navigation stack for back button
+  const [messageSnapshots, setMessageSnapshots] = useState([]); // message count snapshots per step
+  const messagesLenRef = useRef(0); // synced with messages.length for snapshot capture
+  const [receiptOverlay, setReceiptOverlay] = useState(null); // overlay receipt data
   const [guessLoading, setGuessLoading] = useState(false); // loading guess sentences inline
   const [slots, setSlots] = useState({
     companion_context: [],
@@ -991,16 +1028,65 @@ export default function App() {
   const [accumulatedSlots, setAccumulatedSlots] = useState({}); // {slot_name: value}
   const [animatingSentence, setAnimatingSentence] = useState(null); // {text, startX, startY}
   const [receiptLoadingIdx, setReceiptLoadingIdx] = useState(null); // which message index is loading receipt
-  const receiptCountRef = useRef(0);
   const [templateCards, setTemplateCards] = useState([]); // Round 1: 泛方案卡片
   const [templateCardsLoading, setTemplateCardsLoading] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState(null); // user selected card id
+
+  // 同步 messages 长度到 ref，供 goToStep 快照使用
+  useEffect(() => {
+    messagesLenRef.current = messages.length;
+  }, [messages]);
+
+  function goToStep(newStep) {
+    setStep((prev) => {
+      if (prev !== newStep && prev !== "idle") {
+        setStepHistory((h) => [...h, prev]);
+        setMessageSnapshots((s) => [...s, messagesLenRef.current]);
+      }
+      return newStep;
+    });
+  }
+
+  function handleBack() {
+    setStepHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const next = [...prev];
+      const lastStep = next.pop();
+      setStep(lastStep);
+      setDraft("");
+
+      // 按快照回退消息：弹出当前 step 的快照，恢复到上一步的消息数量
+      setMessageSnapshots((snaps) => {
+        const nextSnaps = [...snaps];
+        const targetLen = nextSnaps.pop() || 0;
+        setMessages((m) => m.slice(0, targetLen));
+        return nextSnaps;
+      });
+
+      // 清理步骤相关状态
+      if (lastStep === "collecting") {
+        setGuessSentences([]);
+        setAccumulatedSlots({});
+        setTemplateCards([]);
+        setSelectedCardId(null);
+      } else if (lastStep === "followup") {
+        setTemplateCards([]);
+        setSelectedCardId(null);
+      } else if (lastStep === "templates") {
+        setSelectedCardId(null);
+      }
+      return next;
+    });
+  }
 
   function resetChat() {
     setMessages([]);
     setDraft("");
     setError("");
     setStep("idle");
+    setStepHistory([]);
+    setMessageSnapshots([]);
+    setReceiptOverlay(null);
     setSlots({
       companion_context: [],
       time_window: null,
@@ -1023,15 +1109,16 @@ export default function App() {
         const isSelecting = !current.includes(value);
         if (isSelecting) {
           let next;
-          if (value === "solo") {
-            // "独自出行" 与除"带宠物"外的所有标签互斥
+          if (value === "solo" || value === "couple") {
+            // "独自出行" 和 "情侣出行" 与除"带宠物"外的所有标签互斥
             next = [...current.filter((v) => v === "pet"), value];
           } else if (value === "pet") {
             next = [...current, value];
           } else {
-            // 选择其他标签时取消"独自出行"
-            next = [...current.filter((v) => v !== "solo"), value];
+            // 选择其他标签时取消"独自出行"和"情侣出行"
+            next = [...current.filter((v) => v !== "solo" && v !== "couple"), value];
           }
+          if (next.length > 3) return prev;
           return { ...prev, companion_context: next };
         } else {
           return { ...prev, companion_context: current.filter((v) => v !== value) };
@@ -1055,7 +1142,7 @@ export default function App() {
   }
 
   async function handleSlotsSubmit() {
-    setStep("followup");
+    goToStep("followup");
     setGuessLoading(true);
     setError("");
 
@@ -1081,7 +1168,7 @@ export default function App() {
       setAccumulatedSlots({});
     } catch (err) {
       setError(err instanceof Error ? err.message : "追问生成失败");
-      setStep("collecting");
+      goToStep("collecting");
     } finally {
       setGuessLoading(false);
     }
@@ -1148,11 +1235,11 @@ export default function App() {
       const cards = data?.data?.cards || [];
       if (cards.length > 0) {
         setTemplateCards(cards);
-        setStep("templates");
+        goToStep("templates");
         setSelectedCardId(null);
       } else {
         // 跳步：用户信息足够丰富，直接生成方案
-        setStep("result");
+        goToStep("result");
         setTemplateCards([]);
         submitWithCard(null);
       }
@@ -1172,7 +1259,7 @@ export default function App() {
 
   async function submitWithCard(cardId) {
     setLoading(true);
-    setStep("result");
+    goToStep("result");
     setTemplateCards([]);
     setGuessSentences([]);
     setError("");
@@ -1274,7 +1361,7 @@ export default function App() {
     setDraft("");
     setError("");
     setLoading(true);
-    setStep("result"); // skip structured flow
+    goToStep("result"); // skip structured flow
     setMessages((prev) => [...prev, { role: "user", content: message }]);
 
     try {
@@ -1338,15 +1425,11 @@ export default function App() {
       const receiptResult = await response.json();
       const receiptData = receiptResult?.data || receiptResult;
 
-      setMessages((prev) => {
-        const next = [...prev];
-        if (next[msgIndex] && next[msgIndex].role === "agent") {
-          next[msgIndex] = {
-            ...next[msgIndex],
-            receipt: receiptData,
-          };
-        }
-        return next;
+      // Open overlay instead of inline
+      setReceiptOverlay({
+        receipt: receiptData.receipt,
+        shareText: receiptData.share_text,
+        actions: receiptData.actions,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "小票生成失败");
@@ -1357,31 +1440,14 @@ export default function App() {
 
   function handleComposerFocus() {
     if (step === "idle") {
-      setStep("collecting");
+      goToStep("collecting");
     }
   }
 
   function handleGuessCardPick(prompt) {
     setDraft(prompt);
-    setStep("collecting");
+    goToStep("collecting");
   }
-
-  // Auto-scroll to receipt card when it appears
-  useEffect(() => {
-    const receiptCount = messages.filter((m) => m.role === "agent" && m.receipt).length;
-    if (receiptCount > receiptCountRef.current) {
-      receiptCountRef.current = receiptCount;
-      // Wait for DOM update, then scroll the receipt into view
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const receiptEl = document.querySelector(".receipt-card");
-          if (receiptEl) {
-            receiptEl.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        });
-      });
-    }
-  }, [messages]);
 
   // ---- Render ----
 
@@ -1389,7 +1455,11 @@ export default function App() {
     <main className="app-shell">
       <section className="phone-frame">
         <StatusBar />
-        <Header onReset={resetChat} />
+        <Header
+          onReset={resetChat}
+          onBack={handleBack}
+          canGoBack={step !== "idle" && stepHistory.length > 0}
+        />
         <div className="chat-scroll" ref={scrollRef}>
           {step === "idle" && messages.length === 0 && (
             <EmptyState onPick={handleGuessCardPick} />
@@ -1438,13 +1508,6 @@ export default function App() {
                   onShare={() => handleShare(index, message.result)}
                   shareLoading={receiptLoadingIdx === index}
                 />
-                {message.receipt && (
-                  <ReceiptCard
-                    receipt={message.receipt.receipt}
-                    shareText={message.receipt.share_text}
-                    actions={message.receipt.actions}
-                  />
-                )}
               </div>
             ),
           )}
@@ -1469,6 +1532,10 @@ export default function App() {
           onFocus={handleComposerFocus}
         />
       </section>
+      <ReceiptOverlay
+        data={receiptOverlay}
+        onClose={() => setReceiptOverlay(null)}
+      />
     </main>
   );
 }

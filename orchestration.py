@@ -798,7 +798,7 @@ def _parse_user_input_constraints(text: str) -> Dict[str, Any]:
         constraints["budget"] = "medium"
 
     # 距离
-    if re.search(r'附近|离家近|不远|近一点', text):
+    if re.search(r'附近|离家近|不要太远|不远|近一点', text):
         constraints["travel_radius"] = "short"
     elif re.search(r'远点|远一些|出去', text):
         constraints["travel_radius"] = "far"

@@ -1202,11 +1202,76 @@ button {
   to { transform: rotate(360deg); }
 }
 
+/* ==================== Receipt Overlay ==================== */
+
+.receipt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  animation: overlay-fade-in 0.25s ease;
+  padding: 24px;
+}
+
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.receipt-overlay-inner {
+  width: min(340px, calc(100% - 40px));
+  max-height: 85vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  animation: overlay-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.receipt-overlay-inner::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes overlay-slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.receipt-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  color: #666;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.receipt-close-btn:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #222;
+}
+
 /* ==================== Receipt Card ==================== */
 
 .receipt-card {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 0;
+  position: relative;
   background: #fffef9;
   border: 1.5px solid #f0e8cf;
   border-radius: 20px;

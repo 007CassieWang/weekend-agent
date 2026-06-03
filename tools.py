@@ -102,6 +102,15 @@ def search_activities(
         if activity.duration_minutes > duration_hours * 60 * 0.6:
             continue
 
+        # 室内/室外偏好过滤
+        if preferences:
+            style = preferences.get("activity_style", "")
+            item_io = getattr(activity, "indoor_outdoor", "")
+            if style == "outdoor" and item_io == "indoor":
+                continue
+            if style == "indoor" and item_io == "outdoor":
+                continue
+
         # 模拟某些活动可能已满
         if random.random() < 0.1:  # 10% 概率不可预约
             activity.is_available = False
@@ -120,7 +129,9 @@ def search_restaurants(
     diet_friendly: bool = True,
     child_friendly: bool = True,
     group_friendly: bool = True,
-    max_drive_minutes: int = 30
+    max_drive_minutes: int = 30,
+    cuisine_keywords: Optional[List[str]] = None,
+    budget_level: Optional[str] = None,
 ) -> List[Restaurant]:
     """
     搜索餐厅
@@ -132,13 +143,46 @@ def search_restaurants(
         child_friendly: 是否需要儿童友好
         group_friendly: 是否需要适合多人
         max_drive_minutes: 最大车程
+        cuisine_keywords: 菜系关键词列表（如 ["火锅", "日料"]），用于匹配用户偏好，默认为空（不限菜系）
+        budget_level: 预算等级 ("low"/"medium"/"high")，默认为 None（不限预算）
 
     Returns:
-        符合条件的餐厅列表
+        符合条件的餐厅列表（按匹配度排序，高匹配在前）
     """
     max_distance_km = (max_drive_minutes / 60) * 30
 
-    results = []
+    # 预算区间映射
+    budget_ranges = {
+        "low": (0, 100),
+        "medium": (100, 300),
+        "high": (300, 9999),
+    }
+
+    cuisine_keywords = cuisine_keywords or []
+    budget_range = budget_ranges.get(budget_level or "") if budget_level else None
+
+    # cuisine_keywords 归一化：支持用户说"火锅"同时匹配"火锅""重庆火锅"等
+    cuisine_lower = [kw.strip().lower() for kw in cuisine_keywords if kw]
+
+    def _cuisine_match_score(restaurant: Restaurant) -> int:
+        """计算菜系匹配分：完全不匹配=0，部分匹配=1，精确匹配=3。"""
+        if not cuisine_lower:
+            return 0
+        ct = (restaurant.cuisine_type or "").lower()
+        # 拆分复合菜系（如 "粤菜/本帮菜" → ["粤菜", "本帮菜"]）
+        ct_parts = [p.strip() for p in ct.replace("/", " ").split()]
+        # 也检查 restaurant 的 type 字段
+        rt = (restaurant.type or "").lower()
+        search_text = " ".join([ct] + ct_parts + [rt])
+        best = 0
+        for kw in cuisine_lower:
+            if kw == ct or kw in ct_parts:
+                best = max(best, 3)  # 精确匹配
+            elif kw in search_text:
+                best = max(best, 1)  # 模糊匹配
+        return best
+
+    scored = []  # (match_score, price_penalty, restaurant)
     for restaurant in default_poi_repository.list_restaurants():
         # 距离筛选
         if restaurant.distance_km > max_distance_km:
@@ -148,23 +192,41 @@ def search_restaurants(
         if child_friendly and not restaurant.child_friendly:
             continue
 
-        # 减脂友好筛选
-        if diet_friendly and not restaurant.diet_friendly:
-            # 不完全剔除，但标记
-            pass
-
         # 多人筛选
         if group_friendly and not restaurant.group_friendly:
             continue
+
+        # 预算过滤：预算等级明确时，严重超预算的餐厅大幅降权（但保留，兜底用）
+        price_penalty = 0
+        if budget_range:
+            low, high = budget_range
+            price = restaurant.price_per_person or 0
+            if price > high * 1.5:
+                price_penalty = 100  # 远超预算，排到最后
+            elif price > high:
+                price_penalty = 30   # 略超预算
 
         # 模拟某些餐厅可能已满
         if random.random() < 0.15:  # 15% 概率已满
             restaurant.is_available = False
 
-        results.append(restaurant)
+        match_score = _cuisine_match_score(restaurant)
+        scored.append((match_score, price_penalty, restaurant))
 
-    # 优先返回减脂友好的餐厅
-    results.sort(key=lambda x: (not x.diet_friendly if diet_friendly else False, x.distance_km))
+    # 排序：菜系匹配分降序（高分在前）→ 预算惩罚升序 → 距离升序
+    scored.sort(key=lambda x: (-x[0], x[1], x[2].distance_km))
+
+    results = [item[2] for item in scored]
+
+    # 如果有菜系偏好且匹配数极少（≤2），日志提示
+    if cuisine_lower:
+        matched_count = sum(1 for item in scored if item[0] > 0)
+        if matched_count <= 2:
+            import logging
+            logging.getLogger("tools").info(
+                f"search_restaurants: 菜系关键词 {cuisine_keywords} 仅匹配 {matched_count} 家，"
+                f"已返回全部 {len(results)} 家按距离兜底"
+            )
 
     return results
 

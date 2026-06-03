@@ -14,7 +14,11 @@ product_profile:
     - "硬约束优先过滤，软偏好用于评分排序"
     - "缺失信息优先使用中性默认值，避免强行补成家庭/亲子场景"
 
-# ==================== 默认值配置：全部保持中性 ====================
+# ==================== 默认值配置 ====================
+# 优先级规则：用户在第一轮结构化槽位中选择的信息 > 以下默认值。
+# 例如：用户在「什么时候」选择「全天」→ start_time 从 "14:00" 覆盖为 "09:00"，
+# duration_hours 从 4 覆盖为 9（全天的标准时长）。
+# 所有槽位以用户输入为第一优先级，默认值仅在用户未提供时兜底。
 defaults:
   start_time: "14:00"
   duration_hours: 4
@@ -68,15 +72,17 @@ defaults:
 
 # ==================== 槽位分类 ====================
 slot_schema:
-  # 核心槽位：大多数场景都需要。transportation 优先级最高，影响行程路线规划。
+  # 核心槽位：第一轮结构化输入收集，优先级高的槽位对方案可执行性影响最大。
+  # 优先级排序：companions > start_time > duration_hours > transportation > 其余槽位。
+  # transportation 是核心槽位（影响路线规划、停车/地铁偏好），但不是最高优先级。
   core_slots:
-    - transportation
-    - time_window
+    - companions
     - start_time
     - duration_hours
+    - time_window
     - location
     - people_count
-    - companions
+    - transportation
     - max_drive_minutes
     - budget_level
     - activity_preference
@@ -102,10 +108,10 @@ slot_schema:
   # 追问优先级：只追问会显著影响可执行性的槽位
   clarification_priority:
     high:
-      - transportation
       - location
       - date_or_time_window
       - people_count
+      - transportation
     medium:
       - budget_level
       - max_drive_minutes
@@ -157,7 +163,7 @@ scenario_detection:
       family_with_children:
         keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿", "幼儿园", "老婆孩子", "一家三口"]
       family_with_elderly:
-        keywords: ["父母", "爸妈", "老人", "长辈", "爷爷", "奶奶", "外公", "外婆"]
+        keywords: ["父母", "爸妈", "老人", "长辈", "爷爷", "奶奶", "外公", "外婆", "老人家"]
       friends:
         keywords: ["朋友", "好友", "哥们", "闺蜜", "兄弟", "同学", "搭子"]
       colleagues:
@@ -181,7 +187,7 @@ scenario_detection:
       wellness_relax:
         keywords: ["SPA", "按摩", "洗浴", "温泉", "瑜伽", "疗愈", "书店", "放松"]
       nightlife:
-        keywords: ["夜生活", "酒吧", "夜店", "深夜", "晚上嗨"]
+        keywords: ["夜生活", "酒吧", "夜店", "livehouse", "深夜", "晚上嗨"]
       parent_child:
         keywords: ["亲子", "儿童乐园", "儿童剧", "带娃", "孩子玩", "科技馆"]
       short_trip:
@@ -192,10 +198,10 @@ scenario_detection:
       rainy_day: ["下雨", "雨天", "阴雨"]
       hot_weather: ["太热", "高温", "热天", "暴晒"]
       cold_weather: ["太冷", "降温", "冷天"]
-      low_budget: ["便宜", "省钱", "低预算", "预算不高", "实惠", "人均100", "100以内", "别太贵", "别太高", "不用太贵"]
-      high_budget: ["高端", "预算充足", "精致", "仪式感"]
-      low_energy: ["别太累", "不要太累", "不想太累", "低体力", "轻松", "少走路", "懒得动"]
-      high_energy: ["运动", "爬山", "徒步", "骑行", "出汗"]
+      low_budget: ["便宜", "省钱", "低预算", "预算不高", "实惠", "人均100", "人均 100", "100以内", "不要太贵", "别太贵", "别太高", "不用太贵", "不太贵"]
+      high_budget: ["高端", "贵一点", "预算充足", "精致", "仪式感"]
+      low_energy: ["别太累", "不要太累", "不想太累", "不累", "低体力", "轻松", "少走路", "懒得动"]
+      high_energy: ["运动", "爬山", "徒步", "骑行", "出汗", "高强度"]
       quiet: ["安静", "清静", "人少", "不吵"]
       lively: ["热闹", "气氛好", "嗨", "好玩"]
       photo_spot: ["拍照", "出片", "打卡", "好看"]
@@ -203,7 +209,7 @@ scenario_detection:
       parking_needed: ["开车", "停车", "好停车", "自驾"]
       near_subway: ["地铁", "近地铁", "地铁口"]
       low_walking: ["少走路", "不想走", "走不动", "低步行"]
-      queue_sensitive: ["不想排队", "少排队", "别排队", "等位少"]
+      queue_sensitive: ["不想排队", "不要排队", "少排队", "别排队", "等位少"]
     hard_constraints:
       child_safety:
         trigger_keywords: ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿"]
@@ -223,7 +229,7 @@ scenario_detection:
         trigger_keywords: ["无障碍", "轮椅", "行动不便", "拐杖"]
         enabled_when_slot_true: "accessibility_need"
       max_distance:
-        trigger_keywords: ["别太远", "不远", "附近", "离家近", "30分钟内", "半小时内"]
+        trigger_keywords: ["不要太远", "别太远", "不远", "附近", "离家近", "30分钟内", "半小时内"]
       budget_cap:
         trigger_keywords: ["预算不超过", "不能超过", "封顶", "人均100", "100以内", "数字以内"]
       time_window:
@@ -539,10 +545,11 @@ scoring_profiles:
   active_outdoor:
     time_fit: 15
     distance_fit: 15
-    weather_fit: 20
+    weather_fit: 16
     activity_intensity_match: 20
     scenery_or_experience: 15
     availability_risk: 15
+    preference_match: 16
 
   culture_experience:
     time_fit: 20

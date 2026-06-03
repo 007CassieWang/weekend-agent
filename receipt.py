@@ -13,6 +13,69 @@ from typing import Any, Dict, List, Optional
 
 # ==================== 小票卡片生成 ====================
 
+# 通勤方式映射表（同时覆盖 Round 2 的 mobility 和 UserRequest 的 transportation 两种 key）
+_MOBILITY_LABELS = {
+    "driving": "自驾", "自驾": "自驾",
+    "transit": "地铁/公交", "公共交通": "地铁/公交",
+    "taxi": "打车", "打车": "打车",
+    "bike_walk": "骑行/步行",
+}
+
+
+def _resolve_mobility(constraints: Dict[str, Any]) -> str:
+    """从约束条件中推断通勤方式，兼容多种 key 命名。"""
+    # Round 2 locked_constraints 使用 "mobility"
+    mobility = constraints.get("mobility", "")
+    if mobility and mobility in _MOBILITY_LABELS:
+        return _MOBILITY_LABELS[mobility]
+    # UserRequest 使用 "transportation"
+    transport = constraints.get("transportation", "")
+    if transport and transport in _MOBILITY_LABELS:
+        return _MOBILITY_LABELS[transport]
+    # context_modifiers 中可能包含交通相关 hint
+    modifiers = constraints.get("context_modifiers", [])
+    if "parking_needed" in modifiers or "自驾" in str(constraints):
+        return "自驾"
+    if "near_subway" in modifiers:
+        return "地铁/公交"
+    return ""
+
+
+def _resolve_budget(constraints: Dict[str, Any]) -> str:
+    """从约束条件中推断预算等级，兼容多种 key 命名。"""
+    # Round 2 使用 "budget"
+    budget = constraints.get("budget", "")
+    # UserRequest 使用 "budget_level"
+    budget_level = constraints.get("budget_level", "")
+    # context_modifiers 中可能包含预算 hint
+    modifiers = constraints.get("context_modifiers", [])
+    soft_prefs = constraints.get("soft_preferences", [])
+
+    budget_value = budget or budget_level
+
+    budget_map = {
+        "low": "经济实惠", "medium": "中等预算", "high": "预算充足",
+        "经济实惠": "经济实惠", "中等预算": "中等预算", "预算充足": "预算充足",
+    }
+
+    if budget_value:
+        mapped = budget_map.get(budget_value)
+        if mapped:
+            return mapped
+
+    # 从 modifiers 推断
+    if "high_budget" in modifiers or "high_budget" in soft_prefs:
+        return "预算充足"
+    if "low_budget" in modifiers or "low_budget" in soft_prefs:
+        return "经济实惠"
+
+    # 从人均价格推断
+    if "人均" in str(constraints):
+        return "中等预算"
+
+    return "中等预算"  # 默认中等，不再显示"未指定"
+
+
 def generate_receipt(
     plan: Dict[str, Any],
     locked_constraints: Optional[Dict[str, Any]] = None,
@@ -33,7 +96,8 @@ def generate_receipt(
     plan_title = plan.get("title", "周末活动方案")
     timeline = plan.get("timeline", [])
     activities = plan.get("activities", [])
-    restaurant = plan.get("restaurant", {})
+    restaurant = plan.get("restaurant", {}) or {}
+    dinner_restaurant = plan.get("dinner_restaurant", {}) or {}
     risks = plan.get("risks", [])
     total_duration = plan.get("total_duration_minutes", 240)
     score = plan.get("score", 0)
@@ -42,8 +106,10 @@ def generate_receipt(
     activity_names = [a.get("name", "") for a in activities]
     restaurant_name = restaurant.get("name", "") if restaurant else ""
     restaurant_cuisine = restaurant.get("cuisine_type", "") if restaurant else ""
+    dinner_name = dinner_restaurant.get("name", "") if dinner_restaurant else ""
+    dinner_cuisine = dinner_restaurant.get("cuisine_type", "") if dinner_restaurant else ""
 
-    # 构建摘要
+    # 构建摘要（传入晚餐信息）
     summary = _build_summary(
         timeline=timeline,
         constraints=constraints,
@@ -51,6 +117,8 @@ def generate_receipt(
         restaurant_name=restaurant_name,
         restaurant_cuisine=restaurant_cuisine,
         total_duration_minutes=total_duration,
+        dinner_name=dinner_name,
+        dinner_cuisine=dinner_cuisine,
     )
 
     # 提取亮点
@@ -58,6 +126,7 @@ def generate_receipt(
         plan=plan,
         activities=activities,
         restaurant=restaurant,
+        dinner_restaurant=dinner_restaurant,
         risks=risks,
         score=score,
         constraints=constraints,
@@ -67,6 +136,7 @@ def generate_receipt(
     status = _build_status(
         activities=activities,
         restaurant=restaurant,
+        dinner_restaurant=dinner_restaurant,
         timeline=timeline,
     )
 
@@ -109,7 +179,12 @@ def generate_receipt(
 
 
 def _build_receipt_title(plan_title: str, constraints: Dict[str, Any]) -> str:
-    """构建小票标题。"""
+    """构建小票标题，优先使用方案原标题。"""
+    # 优先使用方案的实际标题（如"全天·世纪公园 + 港丽餐厅"）
+    if plan_title and plan_title.strip() and plan_title not in ("周末活动方案", "出行计划", "本地生活行程方案"):
+        return plan_title
+
+    # 兜底：基于 constraints 构建通用标题
     group_type = constraints.get("group_type", "")
     time_slot = constraints.get("time_slot", "")
 
@@ -139,6 +214,8 @@ def _build_summary(
     restaurant_name: str,
     restaurant_cuisine: str,
     total_duration_minutes: int,
+    dinner_name: str = "",
+    dinner_cuisine: str = "",
 ) -> Dict[str, str]:
     """构建小票摘要。"""
     # 时间信息
@@ -168,28 +245,25 @@ def _build_summary(
     # 活动
     activity_str = " → ".join(activity_names) if activity_names else "未指定活动"
 
-    # 餐饮
-    if restaurant_name and restaurant_cuisine:
-        dining_str = f"{restaurant_name}（{restaurant_cuisine}）"
-    elif restaurant_name:
-        dining_str = restaurant_name
-    else:
-        dining_str = "未指定餐厅"
+    # 餐饮：午餐 + 晚餐（全天模式）
+    dining_parts = []
+    if restaurant_name:
+        cuisine_hint = f"（{restaurant_cuisine}）" if restaurant_cuisine else ""
+        dining_parts.append(f"{restaurant_name}{cuisine_hint}")
+    if dinner_name:
+        dinner_hint = f"（{dinner_cuisine}）" if dinner_cuisine else ""
+        dining_parts.append(f"{dinner_name}{dinner_hint}")
+    dining_str = " + ".join(dining_parts) if dining_parts else "未指定餐厅"
 
     # 通勤
-    mobility = constraints.get("mobility", "")
+    mobility = _resolve_mobility(constraints)
     travel_time = constraints.get("max_travel_time", "")
-    mobility_map = {"自驾": "自驾", "打车": "打车", "公共交通": "地铁/公交"}
-    mobility_str = mobility_map.get(mobility, mobility or "未指定")
+    mobility_str = mobility or "未指定"
     if travel_time:
         mobility_str += f"，单程{travel_time}分钟"
 
     # 预算
-    budget = constraints.get("budget", "")
-    if not budget and "restaurant" in str(constraints).lower():
-        budget = "中等"
-    budget_map = {"low": "经济实惠", "medium": "中等预算", "high": "预算充足"}
-    budget_str = budget_map.get(budget, budget or "未指定")
+    budget_str = _resolve_budget(constraints)
 
     return {
         "time": time_str,
@@ -208,8 +282,10 @@ def _extract_highlights(
     risks: List[str],
     score: float,
     constraints: Dict[str, Any],
+    dinner_restaurant: Dict[str, Any] = None,
 ) -> List[str]:
     """提取小票亮点。"""
+    dinner_restaurant = dinner_restaurant or {}
     highlights = []
 
     recommendation_reason = plan.get("recommendation_reason", "")
@@ -231,12 +307,13 @@ def _extract_highlights(
         elif activity_type == "park":
             highlights.append(f"{name}户外透气，放松身心")
 
-    # 餐厅亮点
-    if restaurant:
-        r_name = restaurant.get("name", "")
-        diet_friendly = restaurant.get("diet_friendly", False)
-        if diet_friendly:
-            highlights.append(f"{r_name}有健康轻食选择")
+    # 餐厅亮点（午餐 + 晚餐）
+    for r in [restaurant, dinner_restaurant]:
+        if r:
+            r_name = r.get("name", "")
+            diet_friendly = r.get("diet_friendly", False)
+            if diet_friendly:
+                highlights.append(f"{r_name}有健康轻食选择")
 
     # 从约束条件生成亮点
     if constraints.get("indoor_outdoor") == "indoor":
@@ -279,36 +356,53 @@ def _build_status(
     activities: List[Dict[str, Any]],
     restaurant: Dict[str, Any],
     timeline: List[Dict[str, Any]],
+    dinner_restaurant: Dict[str, Any] = None,
 ) -> Dict[str, str]:
-    """构建小票状态信息。"""
+    """构建小票状态信息（每个 POI 使用唯一键，避免同名键覆盖）。"""
+    dinner_restaurant = dinner_restaurant or {}
     status = {}
 
-    # 活动预约状态
-    for activity in activities:
+    # 活动预约状态（每个活动用唯一键 "活动N"）
+    for idx, activity in enumerate(activities):
         name = activity.get("name", "")
         need_booking = activity.get("need_booking", False)
+        key = f"活动{idx + 1}" if len(activities) > 1 else "活动"
         if need_booking:
-            status["活动预约"] = f"⏰ {name}需提前预约"
+            status[key] = f"⏰ {name}需提前预约"
         else:
-            status["活动入场"] = f"✅ {name}无需预约"
+            status[key] = f"✅ {name}无需预约"
 
-    # 餐厅状态
+    # 餐厅状态（午餐/晚餐分别用唯一键，匹配 timeline 中的 meal 类型站点）
+    meal_items = [item for item in timeline if item.get("type") == "meal"]
+    restaurants_to_process = []
+
     if restaurant:
-        r_name = restaurant.get("name", "")
-        need_booking = restaurant.get("need_booking", True)
+        restaurants_to_process.append(("午餐" if len(meal_items) > 1 else "餐厅", restaurant))
+    if dinner_restaurant:
+        restaurants_to_process.append(("晚餐", dinner_restaurant))
+    # 兜底：timeline 中有 meal 但 restaurant dict 为空
+    if not restaurants_to_process and meal_items:
+        for item in meal_items:
+            name = item.get("location", item.get("activity", "餐厅"))
+            status["用餐"] = f"📍 {name}"
+
+    for label, r in restaurants_to_process:
+        r_name = r.get("name", "")
+        need_booking = r.get("need_booking", False)
+        # 查找对应的用餐时间
+        meal_time = ""
+        for item in meal_items:
+            loc = item.get("location", "")
+            if loc and (loc == r_name or r_name in loc or loc in r_name):
+                meal_time = item.get("time", "").split("-")[0] if "-" in item.get("time", "") else ""
+                break
         if need_booking:
-            # 查找用餐时间
-            meal_time = ""
-            for item in timeline:
-                if item.get("type") == "meal":
-                    meal_time = item.get("time", "").split("-")[0] if "-" in item.get("time", "") else ""
-                    break
             if meal_time:
-                status["餐厅"] = f"⏰ {r_name}建议{meal_time}取号"
+                status[label] = f"⏰ {r_name}建议{meal_time}取号"
             else:
-                status["餐厅"] = f"⏰ {r_name}建议提前取号"
+                status[label] = f"⏰ {r_name}建议提前取号"
         else:
-            status["餐厅"] = f"✅ {r_name}无需预约"
+            status[label] = f"✅ {r_name}无需预约"
 
     # 停车
     status["停车"] = "✅ 目的地有停车场" if any("停车" in str(a) for a in activities) else "✅ 查看目的地停车信息"
@@ -443,7 +537,6 @@ def _get_share_templates(
 def get_share_actions(share_text: str) -> List[Dict[str, str]]:
     """返回分享操作列表。"""
     return [
-        {"action": "share_to_wechat", "label": "发给微信好友", "text": share_text},
-        {"action": "share_to_family_group", "label": "转发家庭群", "text": share_text},
-        {"action": "copy_text", "label": "复制分享语", "text": share_text},
+        {"action": "share_to_wechat", "label": "转发给微信好友", "text": share_text},
+        {"action": "copy_link", "label": "复制链接", "text": share_text},
     ]

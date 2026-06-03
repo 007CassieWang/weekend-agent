@@ -46,6 +46,90 @@ if not logger.handlers:
 QUALITY_SCORE_THRESHOLD = 55  # 低于此分触发重试
 MAX_SEARCH_RETRIES = 3
 
+# 场景偏好排序配置（模块级常量，避免每次调用 _sort_supply_by_scenario 时重建）
+SCENARIO_PREFERENCES = {
+    "elderly_friendly": {
+        "restaurants": ["cantonese", "chinese", "japanese", "light_meal", "粤菜", "中餐", "日料"],
+        "activities": ["botanical_garden", "park", "citywalk", "cafe", "art_exhibition", "museum"],
+        "avoid": ["hotpot", "bbq", "korean", "livehouse", "hiking", "sports", "火锅", "烧烤", "韩料"],
+    },
+    "couple_date": {
+        "restaurants": ["japanese", "cantonese", "thai", "western", "日料", "粤菜", "泰式", "西餐"],
+        "activities": ["cafe", "citywalk", "art_exhibition", "botanical_garden", "onsen"],
+        "avoid": ["food_court", "board_game", "ktv", "hotpot", "综合"],
+    },
+    "solo_relax": {
+        "restaurants": ["cafe", "japanese", "light_meal", "日料", "轻食"],
+        "activities": ["cafe", "citywalk", "park", "art_exhibition", "museum"],
+        "avoid": ["ktv", "hotpot", "bbq"],
+    },
+    "active_outdoor": {
+        "restaurants": ["barbecue", "casual", "cafe", "chinese", "烧烤", "中餐", "西餐"],
+        "activities": ["park", "hiking", "citywalk", "botanical_garden", "onsen"],
+        "avoid": ["mall", "ktv", "cinema", "indoor_playground", "board_game", "livehouse", "商场", "KTV"],
+    },
+}
+
+
+def _is_same_location(loc_a, loc_b) -> bool:
+    """判断两个地点是否相同（名称或地址匹配）。"""
+    if not loc_a or not loc_b:
+        return False
+    name_a = (loc_a.name or "").strip()
+    name_b = (loc_b.name or "").strip()
+    addr_a = (getattr(loc_a, "address", "") or "").strip()
+    addr_b = (getattr(loc_b, "address", "") or "").strip()
+    # 名称相同 或 名称包含对方 或 地址相同
+    if name_a == name_b:
+        return True
+    if name_a and name_b and (name_a in name_b or name_b in name_a):
+        return True
+    if addr_a and addr_b and addr_a == addr_b:
+        return True
+    return False
+
+
+def _resolve_time_slot(time_slot: Optional[str]) -> Dict[str, Any]:
+    """
+    根据用户选择的时间槽位，推断合理的开始时间和时长。
+
+    Args:
+        time_slot: 用户选择的时间槽位 (morning/afternoon/full_day/now)
+
+    Returns:
+        {"start_time": "HH:MM", "duration_hours": int} 或 {}
+    """
+    if not time_slot:
+        return {}
+
+    now = datetime.now()
+    current_hour = now.hour
+
+    if time_slot == "morning":
+        # 上午出发，如果已经过了上午则默认明天上午
+        return {"start_time": "09:00", "duration_hours": 5}
+    elif time_slot == "afternoon":
+        return {"start_time": "14:00", "duration_hours": 5}
+    elif time_slot == "full_day":
+        # 全天：从上午开始，8-10 小时，覆盖午餐+活动+晚餐
+        return {"start_time": "09:00", "duration_hours": 9}
+    elif time_slot == "now":
+        # 现在就出发
+        hour_str = f"{current_hour:02d}:00" if current_hour < 20 else "14:00"
+        return {"start_time": hour_str, "duration_hours": 5}
+    elif time_slot == "今天":
+        # 如果是上午则现在出发，下午则下午开始
+        if current_hour < 12:
+            return {"start_time": f"{current_hour + 1:02d}:00", "duration_hours": max(4, 18 - current_hour)}
+        else:
+            return {"start_time": "14:00", "duration_hours": 4}
+    elif time_slot == "明天":
+        return {"start_time": "09:00", "duration_hours": 6}
+    elif time_slot in ("本周末", "下周末"):
+        return {"start_time": "10:00", "duration_hours": 8}
+
+    return {}
+
 
 class WeekendActivityAgent:
     """周末闲时活动规划 Agent"""
@@ -211,13 +295,53 @@ class WeekendActivityAgent:
         default_when_missing = clarification.get("default_when_missing", {})
         locked = getattr(self.state, "locked_constraints", {}) or {}
 
-        # 补全各个字段
+        # ── 根据用户选择的时间槽位推断开始时间和时长 ──
+        # 多源检测：locked_constraints.time_slot → time_window → request.time_window → raw_text
+        time_slot = (
+            locked.get("time_slot") or
+            locked.get("time_window") or
+            request.time_window
+        )
+
+        # 兜底：从原始消息中检测"全天"关键词
+        if not time_slot and request.raw_text:
+            raw = request.raw_text
+            if any(kw in raw for kw in ["全天", "一整天", "整天", "full_day", "泡一天"]):
+                time_slot = "full_day"
+                self._log("complete_missing_slots", f"从 raw_text 检测到全天意图: '{raw[:80]}'")
+
+        time_slot_defaults = _resolve_time_slot(time_slot)
+
+        # 用户通过结构化槽位明确选了时间 → 强制覆盖（parse_request 的默认值 4h 不优先）
+        if time_slot and time_slot_defaults:
+            if time_slot_defaults.get("start_time"):
+                request.start_time = time_slot_defaults["start_time"]
+                self._log("complete_missing_slots", f"槽位覆盖开始时间: {request.start_time} (time_slot={time_slot})")
+            if time_slot_defaults.get("duration_hours"):
+                request.duration_hours = time_slot_defaults["duration_hours"]
+                self._log("complete_missing_slots", f"槽位覆盖时长: {request.duration_hours}小时 (time_slot={time_slot})")
+
+        # 同步 time_window 到 request，确保下游 is_full_day 检测一致
+        if time_slot and not request.time_window:
+            request.time_window = time_slot
+
+        self._log("complete_missing_slots",
+                  f"最终时间参数: start={request.start_time}, duration={request.duration_hours}h, "
+                  f"time_window={request.time_window}, time_slot_source={time_slot}")
+
+        # 补全各个字段（仅在槽位未覆盖时才用默认值）
         if not request.start_time:
-            request.start_time = default_when_missing.get("exact_start_time", defaults.get("start_time", "14:00"))
+            request.start_time = (
+                default_when_missing.get("exact_start_time") or
+                defaults.get("start_time", "14:00")
+            )
             self._log("complete_missing_slots", f"使用默认开始时间: {request.start_time}")
 
         if not request.duration_hours:
-            request.duration_hours = default_when_missing.get("duration_hours", defaults.get("duration_hours", 4))
+            request.duration_hours = (
+                default_when_missing.get("duration_hours") or
+                defaults.get("duration_hours", 4)
+            )
             self._log("complete_missing_slots", f"使用默认时长: {request.duration_hours}小时")
 
         if not request.budget_level:
@@ -319,6 +443,71 @@ class WeekendActivityAgent:
 
     # ==================== Step 4: 搜索餐厅（支持重试放宽） ====================
 
+    # 用户 food_preference → 中文菜系关键词的映射，与 data/poi_seed.yaml 中的 cuisine_type 对齐
+    CUISINE_KEYWORD_MAP: Dict[str, List[str]] = {
+        "hotpot": ["火锅"],
+        "火锅": ["火锅"],
+        "cantonese": ["粤菜", "本帮菜"],
+        "粤菜": ["粤菜", "本帮菜"],
+        "japanese": ["日料"],
+        "日料": ["日料"],
+        "sushi": ["日料"],
+        "spicy": ["火锅", "烧烤", "小吃", "夜宵"],
+        "western": ["西餐"],
+        "西餐": ["西餐"],
+        "牛排": ["西餐"],
+        "chinese": ["粤菜", "本帮菜", "火锅", "中餐"],
+        "中餐": ["粤菜", "本帮菜", "火锅"],
+        "healthy": ["轻食", "健康餐", "日料"],
+        "轻食": ["轻食", "健康餐"],
+        "korean": ["韩料"],
+        "韩料": ["韩料"],
+        "barbecue": ["烧烤"],
+        "烧烤": ["烧烤"],
+        "cafe": ["咖啡", "茶馆", "甜品"],
+        "咖啡": ["咖啡"],
+        "下午茶": ["茶馆", "甜品", "咖啡"],
+        "seafood": ["粤菜", "日料"],
+        "小吃": ["小吃", "夜宵"],
+        "甜品": ["甜品"],
+        "本帮菜": ["本帮菜", "粤菜"],
+        "东南亚": ["东南亚"],
+        "thai": ["东南亚"],
+        "茶馆": ["茶馆", "咖啡"],
+    }
+
+    @classmethod
+    def _resolve_cuisine_keywords(cls, request: UserRequest) -> List[str]:
+        """从 request 中提取菜系关键词，用于 search_restaurants 的 cuisine 过滤。"""
+        keywords: List[str] = []
+
+        # 1. 优先从 food_preference 字段提取
+        fp = request.food_preference
+        if fp and fp != "none":
+            mapped = cls.CUISINE_KEYWORD_MAP.get(fp.lower() if fp else "", [fp])
+            keywords.extend(mapped)
+
+        # 2. 从 context_modifiers 中提取菜系 hint
+        for mod in (request.context_modifiers or []):
+            mapped = cls.CUISINE_KEYWORD_MAP.get(mod, [])
+            if mapped and mapped != [mod]:
+                keywords.extend(mapped)
+
+        # 3. 从 raw_text 中提取已知菜系关键词
+        raw = (request.raw_text or "").lower()
+        for key, mapped in cls.CUISINE_KEYWORD_MAP.items():
+            if len(key) >= 2 and key in raw and key not in ("chinese", "spicy", "healthy", "western", "cantonese", "japanese", "korean", "barbecue", "sushi", "thai", "seafood"):
+                keywords.extend(mapped)
+
+        # 去重且保留顺序
+        seen = set()
+        result = []
+        for kw in keywords:
+            if kw not in seen:
+                seen.add(kw)
+                result.append(kw)
+        return result
+
     def search_restaurants(self, request: UserRequest, overrides: Optional[Dict[str, Any]] = None) -> List[Restaurant]:
         """
         搜索适合的餐厅
@@ -334,7 +523,11 @@ class WeekendActivityAgent:
         defaults = self.product_rules.get("defaults", {})
         max_drive = overrides.get("max_drive_minutes", defaults.get("max_drive_minutes", 30))
 
-        self._log("search_restaurants", f"正在搜索餐厅 (max_drive={max_drive}min)...")
+        # 从 request 中提取菜系关键词
+        cuisine_keywords = self._resolve_cuisine_keywords(request)
+
+        self._log("search_restaurants",
+                  f"正在搜索餐厅 (max_drive={max_drive}min, cuisine={cuisine_keywords}, budget={request.budget_level})...")
 
         restaurants = search_restaurants(
             location=request.location or "home",
@@ -343,10 +536,13 @@ class WeekendActivityAgent:
             child_friendly=request.has_child and not overrides.get("drop_child_filter"),
             group_friendly=bool(request.people_count and request.people_count > 2),
             max_drive_minutes=max_drive,
+            cuisine_keywords=cuisine_keywords,
+            budget_level=request.budget_level.value if request.budget_level else None,
         )
         restaurants = self._sort_supply_by_scenario(
             self._filter_supply_by_scenario(restaurants, request),
             request,
+            cuisine_keywords=cuisine_keywords,
         )
 
         self.state.found_restaurants = restaurants
@@ -361,6 +557,7 @@ class WeekendActivityAgent:
 
         child_theme_terms = ["亲子", "儿童乐园", "宝宝", "童话", "游乐区", "儿童餐"]
         family_theme_terms = ["家庭餐厅", "家庭路", "儿童娱乐区", "儿童套餐"]
+        all_theme_terms = child_theme_terms + family_theme_terms  # hoisted: 避免循环内重复拼接
         filtered = []
         for item in items:
             text_parts = [
@@ -375,35 +572,22 @@ class WeekendActivityAgent:
                     " ".join(getattr(item, "tags", []) or []),
                 ])
             text = " ".join(text_parts)
-            if any(term in text for term in child_theme_terms + family_theme_terms):
+            if any(term in text for term in all_theme_terms):
                 continue
             filtered.append(item)
 
         return filtered or items
 
-    def _sort_supply_by_scenario(self, items: List[Any], request: UserRequest) -> List[Any]:
+    def _sort_supply_by_scenario(
+        self, items: List[Any], request: UserRequest,
+        cuisine_keywords: Optional[List[str]] = None,
+    ) -> List[Any]:
         """按当前场景重排供给，候选构建阶段会优先取更匹配的前几项。"""
         if not items:
             return items
 
-        scenario_preferences = {
-            "elderly_friendly": {
-                "restaurants": ["cantonese", "chinese", "japanese", "light_meal", "粤菜", "中餐", "日料"],
-                "activities": ["botanical_garden", "park", "citywalk", "cafe", "art_exhibition", "museum"],
-                "avoid": ["hotpot", "bbq", "korean", "livehouse", "hiking", "sports", "火锅", "烧烤", "韩料"],
-            },
-            "couple_date": {
-                "restaurants": ["japanese", "cantonese", "thai", "western", "日料", "粤菜", "泰式", "西餐"],
-                "activities": ["cafe", "citywalk", "art_exhibition", "botanical_garden", "onsen"],
-                "avoid": ["food_court", "board_game", "ktv", "hotpot", "综合"],
-            },
-            "solo_relax": {
-                "restaurants": ["cafe", "japanese", "light_meal", "日料", "轻食"],
-                "activities": ["cafe", "citywalk", "park", "art_exhibition", "museum"],
-                "avoid": ["ktv", "hotpot", "bbq"],
-            },
-        }
-        prefs = scenario_preferences.get(request.scenario_type)
+        prefs = SCENARIO_PREFERENCES.get(request.scenario_type)
+        cuisine_lower = [kw.strip().lower() for kw in (cuisine_keywords or []) if kw]
 
         modifiers = set(request.context_modifiers or [])
         hard_constraints = set(request.hard_constraints or [])
@@ -427,11 +611,30 @@ class WeekendActivityAgent:
             label_penalty = 0
             label_bonus = 0
 
+            # 菜系匹配信号：精确匹配加 -50（排序值越小越靠前），模糊匹配加 -20
+            cuisine_match_bonus = 0
+            if cuisine_lower:
+                ct = (cuisine or "").lower()
+                ct_parts = [p.strip() for p in ct.replace("/", " ").split()]
+                for kw in cuisine_lower:
+                    if kw == ct or kw in ct_parts:
+                        cuisine_match_bonus = -50  # 精确菜系匹配，大幅提升
+                        break
+                    elif kw in ct:
+                        cuisine_match_bonus = -20  # 模糊菜系匹配
+
             # locked_constraints 影响排序
             if locked.get("indoor_outdoor") == "indoor" and getattr(item, "indoor_outdoor", "") == "outdoor":
                 label_penalty += 50
             if locked.get("indoor_outdoor") == "outdoor" and getattr(item, "indoor_outdoor", "") == "indoor":
-                label_penalty += 20
+                label_penalty += 50
+            # Round 1 自由文本路径：locked_constraints 未设置时从 request 属性推断
+            if not locked.get("indoor_outdoor"):
+                activity_pref = getattr(request, "activity_preference", None)
+                primary_intent = getattr(request, "primary_intent", None)
+                if activity_pref == "outdoor" or primary_intent == "outdoor_walk":
+                    if getattr(item, "indoor_outdoor", "") == "indoor":
+                        label_penalty += 50
             if locked.get("activity_intensity") == "low" and getattr(item, "walking_load", "") == "high":
                 label_penalty += 40
 
@@ -478,7 +681,7 @@ class WeekendActivityAgent:
                 label_bonus += 18
 
             return (
-                avoid_penalty + preferred_rank + label_penalty - label_bonus,
+                avoid_penalty + preferred_rank + label_penalty - label_bonus + cuisine_match_bonus,
                 getattr(item, "distance_km", 999),
             )
 
@@ -538,49 +741,226 @@ class WeekendActivityAgent:
         # 获取用户位置
         home_location = request.from_location or get_user_context().get("home_location")
 
-        # 组合方案 1: 活动 + 餐厅
-        if activities and restaurants:
-            for i, activity in enumerate(activities[:3]):  # 取前3个活动
-                for j, restaurant in enumerate(restaurants[:2]):  # 每个活动配2个餐厅
-                    plan_id = f"plan_{i}_{j}"
-                    plan = self._build_single_plan(
-                        plan_id,
-                        request,
-                        [activity],
-                        restaurant,
-                        home_location
-                    )
-                    if plan:
-                        plans.append(plan)
+        # 判断是否全天模式
+        locked = getattr(self.state, "locked_constraints", {}) or {}
+        is_full_day = (
+            locked.get("time_slot") == "full_day"
+            or locked.get("time_window") == "full_day"
+            or request.time_window == "full_day"
+            or (request.duration_hours and request.duration_hours >= 7)
+        )
+        self._log("build_candidate_plans",
+                  f"全天检测: is_full_day={is_full_day}, "
+                  f"locked.time_slot={locked.get('time_slot')}, "
+                  f"request.time_window={request.time_window}, "
+                  f"request.duration_hours={request.duration_hours}, "
+                  f"activities={len(activities)}, restaurants={len(restaurants)}")
 
-        # 组合方案 2: 两个活动 + 餐厅（如果时间允许）
+        # ── 全天方案优先构建，防止被普通方案挤掉 Top 5 ──
+        # 全天特别方案：上午活动 → 午餐 → 下午活动 → 晚餐（4 张 POI 卡）
+        # 约束：
+        #   1. 上午/下午不能同一地点（名称+地址）
+        #   2. 上午/下午尽量不同类型（户外 vs 室内 vs 文化等）
+        #   3. 午餐/晚餐必须不同餐厅、不同菜系
+        if is_full_day and len(activities) >= 2 and len(restaurants) >= 2:
+            n_act = len(activities)
+            n_rest = len(restaurants)
+            # 扩大召回范围：活动取前 8，餐厅取前 6
+            act_range = min(8, n_act)
+            rest_range = min(6, n_rest)
+            for i in range(act_range - 1):
+                act_a = activities[i]
+                for j in range(i + 1, min(i + 6, act_range)):
+                    act_b = activities[j]
+                    # 约束 1: 不能同一地点
+                    if _is_same_location(act_a.location, act_b.location):
+                        continue
+                    # 约束 2: 上下午必须不同类型（mall→mall 太单调）
+                    if act_a.type == act_b.type:
+                        continue
+                    combo_count = 0
+                    for lunch_idx in range(rest_range):
+                        lunch = restaurants[lunch_idx]
+                        for dinner_idx in range(rest_range):
+                            if lunch_idx == dinner_idx:
+                                continue
+                            dinner = restaurants[dinner_idx]
+                            # 约束 3: 午餐和晚餐必须是不同餐厅、不同菜系
+                            # 餐厅名称和地点具有唯一对应性 — 用已有的 _is_same_location 兜底
+                            if lunch.id == dinner.id or lunch.name == dinner.name:
+                                continue
+                            if _is_same_location(lunch.location, dinner.location):
+                                continue  # 同地点即同餐厅，防御性兜底
+                            if lunch.cuisine_type == dinner.cuisine_type:
+                                continue  # 同菜系直接拒绝（如两家居酒屋）
+                            plan_id = f"plan_fullday_{i}_{j}_{lunch_idx}_{dinner_idx}"
+                            plan = self._build_single_plan(
+                                plan_id, request,
+                                [act_a, act_b],
+                                lunch,
+                                home_location,
+                                full_day=True,
+                                dinner_restaurant=dinner,
+                            )
+                            if plan:
+                                plans.append(plan)
+
+        # 全天两活动+午餐方案（无晚餐，3 张 POI 卡，兜底用）
+        if is_full_day and len(activities) >= 2 and len(restaurants) >= 1:
+            for i in range(min(3, len(activities) - 1)):
+                for j in range(i + 1, min(i + 4, len(activities))):
+                    if _is_same_location(activities[i].location, activities[j].location):
+                        continue  # 上下午不能同一地点
+                    if activities[i].type == activities[j].type:
+                        continue  # 上下午必须不同类型
+                    for r_idx in range(min(6, len(restaurants))):
+                        plan_id = f"plan_combo_{i}_{j}_{r_idx}"
+                        plan = self._build_single_plan(
+                            plan_id, request,
+                            [activities[i], activities[j]],
+                            restaurants[r_idx],
+                            home_location,
+                            full_day=True,
+                        )
+                        if plan:
+                            plans.append(plan)
+
+        # 普通两活动方案（时长 >= 5h）
         if len(activities) >= 2 and request.duration_hours and request.duration_hours >= 5:
             for i in range(min(2, len(activities) - 1)):
                 for j in range(min(2, len(restaurants))):
-                    plan_id = f"plan_combo_{i}_{j}"
+                    plan_id = f"plan_two_{i}_{j}"
                     plan = self._build_single_plan(
-                        plan_id,
-                        request,
-                        activities[i:i+2],  # 两个活动
+                        plan_id, request,
+                        activities[i:i+2],
                         restaurants[j],
-                        home_location
+                        home_location,
+                        full_day=False,
                     )
                     if plan:
                         plans.append(plan)
 
-        # 去重
-        seen = set()
-        unique_plans = []
-        for plan in plans:
-            key = (tuple(a.id for a in plan.activities), plan.restaurant.id if plan.restaurant else None)
-            if key not in seen:
-                seen.add(key)
-                unique_plans.append(plan)
+        # 单活动方案（最短，优先级最低）
+        if activities and restaurants:
+            for i, activity in enumerate(activities[:3]):
+                for j, restaurant in enumerate(restaurants[:2]):
+                    plan_id = f"plan_{i}_{j}"
+                    plan = self._build_single_plan(
+                        plan_id, request,
+                        [activity], restaurant, home_location
+                    )
+                    if plan:
+                        plans.append(plan)
 
-        self.state.candidate_plans = unique_plans[:5]  # 最多5个方案
-        self._log("build_candidate_plans", f"成功构建 {len(self.state.candidate_plans)} 个候选方案")
+        # 去重 + 轮询排序：按活动对分组后轮询取，确保 Top 5 里活动多样性
+        seen = set()
+        full_day_plans = []
+        other_plans = []
+        # 按活动对分组
+        pair_groups = {}  # {act_pair_key: [plan, ...]}
+        for plan in plans:
+            key = (
+                tuple(a.id for a in plan.activities),
+                plan.restaurant.id if plan.restaurant else None,
+                plan.dinner_restaurant.id if plan.dinner_restaurant else None,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            if plan.title.startswith("全天·"):
+                pair_key = tuple(a.id for a in plan.activities)
+                pair_groups.setdefault(pair_key, []).append(plan)
+            else:
+                other_plans.append(plan)
+
+        # 轮询：每轮从每个活动对取 1 个，优先从未用过的餐厅组合
+        group_keys = list(pair_groups.keys())
+        group_idxs = [0] * len(group_keys)
+        used_lunch_ids = set()
+        used_dinner_ids = set()
+
+        while len(full_day_plans) < 5 and group_keys:
+            added_any = False
+            for g in range(len(group_keys)):
+                gk = group_keys[g]
+                group_plans = pair_groups[gk]
+                # 在该组中找第一个未用餐厅组合的计划
+                picked = None
+                for idx in range(group_idxs[g], len(group_plans)):
+                    p = group_plans[idx]
+                    lunch_id = p.restaurant.id if p.restaurant else None
+                    dinner_id = p.dinner_restaurant.id if p.dinner_restaurant else None
+                    if lunch_id not in used_lunch_ids or dinner_id not in used_dinner_ids:
+                        picked = idx
+                        break
+                if picked is None:
+                    picked = group_idxs[g]  # fallback: 取下一个未用的
+                if picked < len(group_plans):
+                    plan = group_plans[picked]
+                    full_day_plans.append(plan)
+                    if plan.restaurant:
+                        used_lunch_ids.add(plan.restaurant.id)
+                    if plan.dinner_restaurant:
+                        used_dinner_ids.add(plan.dinner_restaurant.id)
+                    group_idxs[g] = picked + 1
+                    added_any = True
+            if not added_any:
+                break
+
+        unique_plans = full_day_plans + other_plans
+        self.state.candidate_plans = unique_plans[:5]
+        self._log("build_candidate_plans",
+                  f"成功构建 {len(self.state.candidate_plans)} 个候选方案 "
+                  f"(全天={len(full_day_plans)}, 普通={len(other_plans)})")
 
         return self.state.candidate_plans
+
+    # ── 时间线构建辅助函数 ──
+
+    @staticmethod
+    def _add_travel_stop(timeline, route_infos, current_time, from_loc, to_loc, activity_label, check_fn, description=None):
+        """添加一段通勤行程到 timeline，返回到达时间。"""
+        route = check_fn(from_loc, to_loc)
+        route_infos.append(route)
+        travel_minutes = route.travel_minutes
+        arrival = current_time + timedelta(minutes=travel_minutes)
+        timeline.append(TimelineItem(
+            start_time=current_time.strftime("%H:%M"),
+            end_time=arrival.strftime("%H:%M"),
+            activity=activity_label,
+            location="途中",
+            type="travel",
+            description=description or f"车程约{travel_minutes}分钟"
+        ))
+        return arrival
+
+    @staticmethod
+    def _add_activity_stop(timeline, current_time, activity):
+        """添加一个活动站点到 timeline，返回活动结束时间。"""
+        end_time = current_time + timedelta(minutes=activity.suggested_duration_minutes)
+        timeline.append(TimelineItem(
+            start_time=current_time.strftime("%H:%M"),
+            end_time=end_time.strftime("%H:%M"),
+            activity=activity.name,
+            location=activity.location.name,
+            type="activity",
+            description=activity.description[:50] + "..."
+        ))
+        return end_time + timedelta(minutes=10)
+
+    @staticmethod
+    def _add_meal_stop(timeline, current_time, restaurant, meal_label, duration_minutes=70):
+        """添加一个用餐站点到 timeline，返回用餐结束时间。"""
+        end_time = current_time + timedelta(minutes=duration_minutes)
+        timeline.append(TimelineItem(
+            start_time=current_time.strftime("%H:%M"),
+            end_time=end_time.strftime("%H:%M"),
+            activity=f"在{restaurant.name}{meal_label}",
+            location=restaurant.location.name,
+            type="meal",
+            description=f"{restaurant.cuisine_type}，人均¥{restaurant.price_per_person}"
+        ))
+        return end_time + timedelta(minutes=15)
 
     def _build_single_plan(
         self,
@@ -588,10 +968,22 @@ class WeekendActivityAgent:
         request: UserRequest,
         activities: List[Activity],
         restaurant: Restaurant,
-        home_location: Location
+        home_location: Location,
+        full_day: bool = False,
+        dinner_restaurant: Optional[Restaurant] = None,
     ) -> Optional[CandidatePlan]:
-        """构建单个方案的时间线"""
+        """
+        构建单个方案的时间线。
 
+        full_day=True 且提供 dinner_restaurant 时，构建完整的全天行程：
+        Home → 上午活动 → 午餐(restaurant) → 下午活动 → 晚餐(dinner_restaurant) → Home
+
+        仅 full_day=True 无 dinner_restaurant 时：
+        Home → 活动1 → 午餐(restaurant) → 活动2 → Home
+
+        默认模式：
+        Home → 活动1 → 活动2 → 餐厅(restaurant) → Home
+        """
         try:
             timeline = []
             route_infos = []
@@ -599,6 +991,10 @@ class WeekendActivityAgent:
             # 解析开始时间
             start_time = datetime.strptime(request.start_time or "14:00", "%H:%M")
             current_time = start_time
+
+            # 决定模式
+            has_dinner = full_day and dinner_restaurant is not None and restaurant is not None and len(activities) >= 2
+            meal_between = full_day and len(activities) >= 2 and restaurant is not None
 
             # 1. 从家出发
             timeline.append(TimelineItem(
@@ -610,127 +1006,98 @@ class WeekendActivityAgent:
                 description="准备出发"
             ))
 
-            # 2. 第一个活动地点
+            first_activity = None
+            last_location = home_location
+
+            # ── 2. 上午活动 ──
             if activities:
                 first_activity = activities[0]
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    home_location, first_activity.location,
+                    f"前往{first_activity.name}", self.check_route_time)
 
-                # 计算路程
-                route = self.check_route_time(home_location, first_activity.location)
-                route_infos.append(route)
+                current_time = self._add_activity_stop(timeline, current_time, first_activity)
+                last_location = first_activity.location
 
-                travel_end = current_time + timedelta(minutes=route.travel_minutes)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=travel_end.strftime("%H:%M"),
-                    activity=f"前往{first_activity.name}",
-                    location=f"途中",
-                    type="travel",
-                    description=f"车程约{route.travel_minutes}分钟"
-                ))
+            # ── 3. 午餐（全天模式：放在活动之间）──
+            if meal_between and restaurant:
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    last_location, restaurant.location,
+                    f"前往{restaurant.name}（午餐）", self.check_route_time)
+                current_time = self._add_meal_stop(timeline, current_time, restaurant, "用午餐", 70)
+                last_location = restaurant.location
 
-                current_time = travel_end
-
-                # 活动进行
-                activity_end = current_time + timedelta(minutes=first_activity.suggested_duration_minutes)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=activity_end.strftime("%H:%M"),
-                    activity=first_activity.name,
-                    location=first_activity.location.name,
-                    type="activity",
-                    description=first_activity.description[:50] + "..."
-                ))
-
-                current_time = activity_end + timedelta(minutes=10)  # 缓冲时间
-
-            # 3. 第二个活动（如果有）
-            if len(activities) > 1:
+            # ── 4. 下午活动 ──
+            if len(activities) > 1 and not meal_between:
+                # 非全天模式：第二个活动在餐厅之前
                 second_activity = activities[1]
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    last_location, second_activity.location,
+                    f"前往{second_activity.name}", self.check_route_time)
+                current_time = self._add_activity_stop(timeline, current_time, second_activity)
+                last_location = second_activity.location
 
-                route = self.check_route_time(first_activity.location, second_activity.location)
-                route_infos.append(route)
+            elif len(activities) > 1 and meal_between:
+                # 全天模式：午餐之后的下午活动
+                second_activity = activities[1]
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    last_location, second_activity.location,
+                    f"前往{second_activity.name}", self.check_route_time)
+                current_time = self._add_activity_stop(timeline, current_time, second_activity)
+                last_location = second_activity.location
 
-                travel_end = current_time + timedelta(minutes=route.travel_minutes)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=travel_end.strftime("%H:%M"),
-                    activity=f"前往{second_activity.name}",
-                    location=f"途中",
-                    type="travel",
-                    description=f"车程约{route.travel_minutes}分钟"
-                ))
+            # ── 5. 晚餐（仅全天+有 dinner_restaurant 时）──
+            if has_dinner:
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    last_location, dinner_restaurant.location,
+                    f"前往{dinner_restaurant.name}（晚餐）", self.check_route_time)
+                current_time = self._add_meal_stop(timeline, current_time, dinner_restaurant, "用晚餐", 80)
+                last_location = dinner_restaurant.location
 
-                current_time = travel_end
+            # ── 6. 餐厅（非全天默认模式：活动之后用餐）──
+            if restaurant and not meal_between:
+                current_time = self._add_travel_stop(
+                    timeline, route_infos, current_time,
+                    last_location, restaurant.location,
+                    f"前往{restaurant.name}", self.check_route_time)
+                current_time = self._add_meal_stop(timeline, current_time, restaurant, "用餐", 80)
+                last_location = restaurant.location
 
-                activity_end = current_time + timedelta(minutes=second_activity.suggested_duration_minutes)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=activity_end.strftime("%H:%M"),
-                    activity=second_activity.name,
-                    location=second_activity.location.name,
-                    type="activity",
-                    description=second_activity.description[:50] + "..."
-                ))
-
-                current_time = activity_end + timedelta(minutes=10)
-
-            # 4. 餐厅用餐
-            if restaurant:
-                last_location = activities[-1].location if activities else home_location
-                route = self.check_route_time(last_location, restaurant.location)
-                route_infos.append(route)
-
-                travel_end = current_time + timedelta(minutes=route.travel_minutes)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=travel_end.strftime("%H:%M"),
-                    activity=f"前往{restaurant.name}",
-                    location=f"途中",
-                    type="travel",
-                    description=f"车程约{route.travel_minutes}分钟"
-                ))
-
-                current_time = travel_end
-
-                # 用餐时长默认80分钟
-                meal_duration = 80
-                meal_end = current_time + timedelta(minutes=meal_duration)
-                timeline.append(TimelineItem(
-                    start_time=current_time.strftime("%H:%M"),
-                    end_time=meal_end.strftime("%H:%M"),
-                    activity=f"在{restaurant.name}用餐",
-                    location=restaurant.location.name,
-                    type="meal",
-                    description=f"{restaurant.cuisine_type}，人均¥{restaurant.price_per_person}"
-                ))
-
-                current_time = meal_end
-
-            # 5. 返程
-            route = self.check_route_time(restaurant.location if restaurant else last_location, home_location)
-            route_infos.append(route)
-
-            travel_end = current_time + timedelta(minutes=route.travel_minutes)
-            timeline.append(TimelineItem(
-                start_time=current_time.strftime("%H:%M"),
-                end_time=travel_end.strftime("%H:%M"),
-                activity="返程回家",
-                location=f"途中",
-                type="travel",
-                description=f"车程约{route.travel_minutes}分钟"
-            ))
+            # ── 7. 返程 ──
+            current_time = self._add_travel_stop(
+                timeline, route_infos, current_time,
+                last_location, home_location,
+                "返程回家", self.check_route_time)
+            # 返程时间已是 timeline 中最后一项的 end_time
 
             # 计算总时长
-            total_duration = (travel_end - start_time).total_seconds() / 60
+            total_duration = (current_time - start_time).total_seconds() / 60
+
+            # 生成标题
+            title_parts = [a.name for a in activities]
+            if has_dinner:
+                title_parts.append(f"{restaurant.name}(午)")
+                title_parts.append(f"{dinner_restaurant.name}(晚)")
+            elif restaurant:
+                title_parts.append(restaurant.name)
+            title = " + ".join(title_parts)
+            if full_day:
+                title = f"全天·{title}"
 
             # 创建方案
             plan = CandidatePlan(
                 plan_id=plan_id,
-                title=f"{' + '.join(a.name for a in activities)} + {restaurant.name}" if restaurant else f"{' + '.join(a.name for a in activities)}",
+                title=title,
                 timeline=timeline,
                 total_duration_minutes=int(total_duration),
                 activities=activities,
                 restaurant=restaurant,
+                dinner_restaurant=dinner_restaurant,
                 route_infos=route_infos,
                 score=0.0,
                 score_breakdown=ScoreBreakdown(),
@@ -796,7 +1163,22 @@ class WeekendActivityAgent:
                 reservation_available=False,
                 need_booking=False,
                 description="社区内的家庭餐厅，方便快捷"
-            )
+            ),
+            Restaurant(
+                id="fallback_rest_002",
+                name="邻里小馆",
+                type="casual",
+                cuisine_type="本帮菜",
+                location=Location(name="邻里小馆", address="社区商业街"),
+                distance_km=1.8,
+                child_friendly=True,
+                diet_friendly=True,
+                group_friendly=True,
+                price_per_person=60,
+                reservation_available=False,
+                need_booking=False,
+                description="社区商业街的家常菜馆，经济实惠"
+            ),
         ]
 
     # ==================== Step 7: 评分 ====================
@@ -1058,12 +1440,10 @@ class WeekendActivityAgent:
 
         if failure_type == "restaurant_unavailable":
             # 选择备选餐厅
-            strategy = fallbacks.get("restaurant_unavailable", "选择同商圈备选餐厅")
             return self._find_fallback_restaurant(original_item)
 
         elif failure_type == "activity_unavailable":
             # 优先选择无需预约的活动
-            strategy = fallbacks.get("activity_unavailable", "优先替换为无需预约的活动")
             for activity in self.state.found_activities:
                 if not activity.need_booking and activity.is_available:
                     return activity
@@ -1085,16 +1465,13 @@ class WeekendActivityAgent:
 
         elif failure_type == "route_too_far":
             # 重新搜索更近的活动和餐厅
-            strategy = fallbacks.get("route_too_far", "重新搜索更近的活动和餐厅")
             max_drive = 15  # 缩小搜索范围
             return None  # 需要重新搜索
 
         elif failure_type == "not_child_friendly":
-            strategy = fallbacks.get("not_child_friendly", "剔除该活动或餐厅")
             return None
 
         elif failure_type == "diet_unfriendly":
-            strategy = fallbacks.get("diet_unfriendly", "优先选择更匹配饮食约束的餐厅")
             for restaurant in self.state.found_restaurants:
                 if restaurant.diet_friendly:
                     return restaurant
@@ -1111,11 +1488,10 @@ class WeekendActivityAgent:
         """根据重试次数生成逐步放宽的搜索参数。"""
         overrides: Dict[str, Any] = {}
         relaxed: List[str] = []
+        base_max_drive = int(self.product_rules.get("defaults", {}).get("max_drive_minutes", 30))
 
         if retry >= 1:
-            overrides["max_drive_minutes"] = int(
-                self.product_rules.get("defaults", {}).get("max_drive_minutes", 30) * 1.5
-            )
+            overrides["max_drive_minutes"] = int(base_max_drive * 1.5)
             relaxed.append(f"max_drive_minutes → {overrides['max_drive_minutes']}min")
 
         if retry >= 2:
@@ -1124,9 +1500,7 @@ class WeekendActivityAgent:
             relaxed.append("drop_child_filter, drop_diet_filter")
 
         if retry >= 3:
-            overrides["max_drive_minutes"] = int(
-                self.product_rules.get("defaults", {}).get("max_drive_minutes", 30) * 2.5
-            )
+            overrides["max_drive_minutes"] = int(base_max_drive * 2.5)
             relaxed.append(f"max_drive_minutes → {overrides['max_drive_minutes']}min (大幅放宽)")
 
         self.state.relaxed_constraints = relaxed
@@ -1319,6 +1693,23 @@ class WeekendActivityAgent:
                 "state": self._get_state_dict(),
             }
 
+    @staticmethod
+    def _restaurant_to_dict(r: Optional[Restaurant]) -> Optional[Dict[str, Any]]:
+        """将 Restaurant 对象转为字典（复用，避免 restaurant/dinner_restaurant 复制粘贴）。"""
+        if r is None:
+            return None
+        return {
+            "name": r.name,
+            "cuisine_type": r.cuisine_type,
+            "diet_friendly": r.diet_friendly,
+            "location": {
+                "name": r.location.name,
+                "address": r.location.address,
+                "district": r.location.district,
+            } if r.location else None,
+            "price_per_person": r.price_per_person,
+        }
+
     def _plan_to_dict(self, plan: CandidatePlan) -> Dict[str, Any]:
         """将方案转换为字典"""
         return {
@@ -1339,6 +1730,7 @@ class WeekendActivityAgent:
                 {
                     "name": a.name,
                     "type": a.type,
+                    "indoor_outdoor": getattr(a, "indoor_outdoor", ""),
                     "child_friendly": a.child_friendly,
                     "need_booking": a.need_booking,
                     "location": {
@@ -1352,17 +1744,8 @@ class WeekendActivityAgent:
                 }
                 for a in plan.activities
             ],
-            "restaurant": {
-                "name": plan.restaurant.name,
-                "cuisine_type": plan.restaurant.cuisine_type,
-                "diet_friendly": plan.restaurant.diet_friendly,
-                "location": {
-                    "name": plan.restaurant.location.name,
-                    "address": plan.restaurant.location.address,
-                    "district": plan.restaurant.location.district,
-                } if plan.restaurant.location else None,
-                "price_per_person": plan.restaurant.price_per_person,
-            } if plan.restaurant else None,
+            "restaurant": self._restaurant_to_dict(plan.restaurant),
+            "dinner_restaurant": self._restaurant_to_dict(plan.dinner_restaurant),
             "route_infos": [
                 {
                     "from": ri.from_location.name if ri.from_location else "",

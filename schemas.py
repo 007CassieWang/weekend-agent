@@ -258,6 +258,7 @@ class CandidatePlan:
     # 活动内容
     activities: List[Activity] = field(default_factory=list)
     restaurant: Optional[Restaurant] = None
+    dinner_restaurant: Optional[Restaurant] = None  # 全天方案的晚餐餐厅
     route_infos: List[RouteInfo] = field(default_factory=list)
 
     # 评分

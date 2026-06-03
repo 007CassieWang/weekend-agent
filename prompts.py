@@ -162,7 +162,7 @@ def _build_llm_system_prompt() -> str:
 - distance_preference: 距离偏好 "nearby" / "far"，无法确定时填 null
 - max_drive_minutes: 最大车程(分钟)，无法确定时填 null
 
-### 通勤方式（核心槽位，优先级最高）
+### 通勤方式（核心槽位，优先级低于同行人、时间窗口和时长）
 - transportation: 通勤方式，取值: "driving"（自驾）/ "transit"（地铁公交）/ "taxi"（打车）/ "bike_walk"（骑行步行）
   影响后续 max_drive_minutes 解读、路线规划、停车/地铁偏好
   当用户说"开车""自驾"时填 "driving"；"地铁""公交"时填 "transit"；"打车""叫车"时填 "taxi"；"骑车""步行""附近走走"时填 "bike_walk"
@@ -471,9 +471,7 @@ def _estimate_completeness(collected_slots: Dict[str, Any], sentences: list) -> 
         covered.add("transportation")
 
     # transportation 是核心槽位，影响后续所有规划
-    if not collected_slots.get("transportation"):
-        # 通勤方式缺失是严重的信息缺口，completeness 直接打折扣
-        pass  # required_slots 中会加入 transportation，自然降低 completeness
+    # 缺失时 registered_required_slots 会加入 transportation，自然地通过 completeness 机制降低评分
 
     # 根据同行人类型判断还需要哪些关键槽位
     key_slots_by_companion = {
@@ -579,7 +577,7 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
     rules = rules or load_product_rules()
     text = user_input.lower()
 
-    child_terms = ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿", "幼儿园"]
+    child_terms = ["孩子", "小孩", "宝宝", "亲子", "儿童", "娃", "儿子", "女儿", "幼儿园", "一家三口", "老婆孩子"]
     elder_terms = ["父母", "爸妈", "老人", "长辈", "爷爷", "奶奶", "外公", "外婆", "老人家"]
     pet_terms = ["宠物", "带狗", "带猫", "遛狗", "猫咪", "狗狗", "可带宠", "宠物友好"]
     spouse_terms = ["老婆", "老公", "妻子", "丈夫", "爱人", "另一半"]
@@ -622,7 +620,7 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
         ("meal", ["吃饭", "吃个", "想吃", "晚饭", "餐厅", "美食", "火锅", "烧烤", "日料", "西餐", "夜宵", "粤菜", "本帮菜"]),
         ("cafe_tea", ["咖啡", "茶馆", "奶茶", "下午茶", "甜品"]),
         ("culture_experience", ["展览", "看展", "博物馆", "美术馆", "艺术", "演出", "音乐剧", "livehouse", "市集", "手作"]),
-        ("indoor_entertainment", ["电影", "ktv", "剧本杀", "密室", "桌游", "台球", "保龄球", "电玩城"]),
+        ("indoor_entertainment", ["电影院", "电影", "ktv", "剧本杀", "密室", "桌游", "台球", "保龄球", "电玩城"]),
         ("outdoor_walk", ["公园", "散步", "走走", "citywalk", "城市漫步", "骑行", "徒步", "露营", "滨水"]),
         ("shopping_mall", ["商场", "购物中心", "奥莱", "商业街", "步行街", "逛街"]),
         ("wellness_relax", ["spa", "按摩", "洗浴", "温泉", "瑜伽", "放松", "疗愈", "书店"]),
@@ -650,7 +648,7 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
         "rainy_day": ["下雨", "雨天", "阴雨"],
         "hot_weather": ["太热", "高温", "热天", "暴晒"],
         "cold_weather": ["太冷", "降温", "冷天"],
-        "low_budget": ["便宜", "省钱", "低预算", "预算不高", "实惠", "人均100", "人均 100", "100以内", "别太贵", "别太高", "不用太贵", "不太贵"],
+        "low_budget": ["便宜", "省钱", "低预算", "预算不高", "实惠", "人均100", "人均 100", "100以内", "不要太贵", "别太贵", "别太高", "不用太贵", "不太贵"],
         "high_budget": ["高端", "贵一点", "预算充足", "精致", "仪式感"],
         "low_energy": ["别太累", "不要太累", "不想太累", "不累", "低体力", "轻松", "少走路", "懒得动"],
         "high_energy": ["运动", "爬山", "徒步", "骑行", "出汗", "高强度"],
@@ -661,7 +659,7 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
         "parking_needed": ["开车", "停车", "好停车", "自驾"],
         "near_subway": ["地铁", "近地铁", "地铁口"],
         "low_walking": ["少走路", "不想走", "走不动", "低步行"],
-        "queue_sensitive": ["不想排队", "少排队", "别排队", "等位少"],
+        "queue_sensitive": ["不想排队", "不要排队", "少排队", "别排队", "等位少"],
     }
     for modifier, kws in modifier_keywords.items():
         if _has_any(text, kws):
@@ -693,7 +691,7 @@ def classify_scenario_labels(user_input: str, rules: Optional[Dict[str, Any]] = 
         hard_constraints.append("accessibility")
         if "low_walking" not in context_modifiers:
             context_modifiers.append("low_walking")
-    if _has_any(text, ["别太远", "不远", "附近", "离家近", "30分钟内", "半小时内"]):
+    if _has_any(text, ["不要太远", "别太远", "不远", "附近", "离家近", "30分钟内", "半小时内"]):
         hard_constraints.append("max_distance")
     if _has_any(text, ["预算不超过", "不能超过", "封顶", "人均100", "100以内"]) or re.search(r'(人均)?\s*\d+\s*以内', text):
         hard_constraints.append("budget_cap")

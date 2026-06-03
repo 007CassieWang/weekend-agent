@@ -135,7 +135,8 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
 
     try:
         # 默认 plan_only: 只生成方案，不执行
-        result = run_agent_plan_only(user_input)
+        # 将 locked_constraints 传入 agent，使其影响搜索、补全和评分
+        result = run_agent_plan_only(user_input, locked_constraints=locked)
         # 缓存 agent 实例供后续 /api/execute 使用
         # (MVP: 简单缓存; 生产应使用 agent 实例的 state)
         if result.get("plan_id"):
@@ -357,7 +358,11 @@ def _synthesize_from_locked_constraints(locked: Dict[str, Any]) -> str:
         parts.append(group_labels.get(group_type, group_type))
 
     time_slot = locked.get("time_slot", "")
-    time_labels = {"今天": "今天", "明天": "明天", "本周末": "本周末"}
+    time_labels = {
+        "今天": "今天", "明天": "明天", "本周末": "本周末",
+        "morning": "上午出发", "afternoon": "下午出发",
+        "full_day": "全天活动，从上午开始", "now": "现在就走",
+    }
     if time_slot:
         parts.append(time_labels.get(time_slot, time_slot))
 
