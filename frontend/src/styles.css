@@ -976,24 +976,65 @@ button {
   margin-top: 8px;
 }
 
-.loading-lines {
-  display: grid;
-  gap: 10px;
+/* ── Loading 动画：缩小版 meta-box ── */
+.loading-card .meta-grid {
+  gap: 6px;
 }
 
-.loading-lines span {
+.loading-card .meta-box {
+  min-height: 52px;
+  border-radius: 12px;
+  background: var(--soft);
+  padding: 9px 10px;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation: loadFloatUp 0.45s ease-out forwards;
+}
+
+.loading-card .meta-box:nth-child(1) { animation-delay: 0.05s; }
+.loading-card .meta-box:nth-child(2) { animation-delay: 0.18s; }
+.loading-card .meta-box:nth-child(3) { animation-delay: 0.31s; }
+.loading-card .meta-box:nth-child(4) { animation-delay: 0.44s; }
+
+.loading-card .meta-box span {
   display: block;
-  height: 14px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #f1f1ee, #fafafa, #f1f1ee);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+  margin-bottom: 4px;
 }
 
-.loading-lines span:nth-child(2) {
-  width: 84%;
+.loading-card .meta-box strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 700;
+  word-break: break-word;
 }
 
-.loading-lines span:nth-child(3) {
-  width: 62%;
+/* 高亮扫光 */
+.loading-card .meta-box::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 40%, rgba(255,255,255,0.55) 60%, transparent 100%);
+  animation: loadShimmer 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes loadFloatUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes loadShimmer {
+  0%   { left: -100%; }
+  100% { left: 130%; }
 }
 
 .error-card {

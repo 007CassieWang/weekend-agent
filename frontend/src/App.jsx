@@ -737,16 +737,11 @@ function LoadingCard({ slots, accumulatedSlots, guessCardCtx }) {
   return (
     <div className="plan-card loading-card">
       <div className="card-label">正在根据你的偏好规划方案</div>
-      <div className="meta-grid">
+      <div className="meta-grid loading-meta-grid">
         <MetaBox label="同行场景" value={companion} />
         <MetaBox label="主要意图" value={intent} />
         <MetaBox label="预计时长" value={duration} />
         <MetaBox label="匹配分" value="计算中…" />
-      </div>
-      <div className="loading-lines">
-        <span />
-        <span />
-        <span />
       </div>
     </div>
   );
