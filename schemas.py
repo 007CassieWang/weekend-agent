@@ -349,6 +349,7 @@ class AgentState:
     # Draft/Commit 两阶段确认
     confirmation_status: str = "none"  # none | pending | confirmed | rejected
     confirmed_plan_id: Optional[str] = None
+    creative_title: str = ""  # 创意标题，由 _build_creative_title 生成并缓存
 
     # Round 2 锁定约束（来自泛方案卡片选择）
     locked_constraints: Dict[str, Any] = field(default_factory=dict)
@@ -367,6 +368,13 @@ class AgentState:
             "message": message,
             "details": details or {}
         })
+
+    # 用户可见的状态流（用于前端加载动画逐行展示）
+    user_status_log: List[str] = field(default_factory=list)
+
+    def add_user_status(self, message: str):
+        """添加一条用户可见的状态消息"""
+        self.user_status_log.append(message)
         self.current_step = step
 
     def record_llm_usage(self, model: str, prompt_tokens: int, completion_tokens: int):

@@ -274,6 +274,7 @@ class WeekendActivityAgent:
         )
 
         self.state.user_request = request
+        self.state.add_user_status("🔍 正在理解你的需求…")
         self._log(
             "parse_request",
             f"解析完成: {request.people_count}人, 时长{request.duration_hours}小时, "
@@ -432,6 +433,7 @@ class WeekendActivityAgent:
                         request.hard_constraints.append(hc)
 
         self._log("complete_missing_slots", "信息补全完成", request.to_dict())
+        self.state.add_user_status("📝 已补全你的偏好信息")
 
         return request
 
@@ -476,6 +478,7 @@ class WeekendActivityAgent:
 
         self.state.found_activities = activities
         self._log("search_activities", f"找到 {len(activities)} 个符合条件的活动")
+        self.state.add_user_status(f"📍 搜索到 {len(activities)} 个附近活动")
 
         return activities
 
@@ -585,6 +588,7 @@ class WeekendActivityAgent:
 
         self.state.found_restaurants = restaurants
         self._log("search_restaurants", f"找到 {len(restaurants)} 家符合条件的餐厅")
+        self.state.add_user_status(f"🍽️ 匹配到 {len(restaurants)} 家合适餐厅")
 
         return restaurants
 
@@ -777,6 +781,7 @@ class WeekendActivityAgent:
             候选方案列表
         """
         self._log("build_candidate_plans", "正在构建候选方案...")
+        self.state.add_user_status("📐 正在规划最优路线…")
 
         plans = []
 
@@ -1435,6 +1440,7 @@ class WeekendActivityAgent:
             评分后的方案列表
         """
         self._log("score_plans", "正在对候选方案评分...")
+        self.state.add_user_status("📊 正在评估方案质量…")
 
         defaults = self.product_rules.get("defaults", {})
 
@@ -1873,12 +1879,14 @@ class WeekendActivityAgent:
                 # 如果搜索结果太少，直接下一轮重试
                 if len(activities) < 1:
                     self._log("retry", f"活动数量不足 ({len(activities)}), 准备重试", level="warning")
+                    self.state.add_user_status(f"🔄 搜索范围不够，正在放宽条件重试…")
                     continue
 
                 # Step 5: 构建候选方案
                 plans = self.build_candidate_plans(request, activities, restaurants)
                 if not plans:
                     self._log("retry", "无法构建可行方案，准备重试", level="warning")
+                    self.state.add_user_status(f"🔄 路线规划失败，正在重新尝试…")
                     continue
 
                 # Step 6: 评分 + 质量门禁
@@ -1898,14 +1906,19 @@ class WeekendActivityAgent:
                     self._log("retry", f"已达最大重试次数，使用当前最优方案 (score={best_plan.score if best_plan else 'N/A'})")
 
             if not plans or not best_plan:
+                self.state.add_user_status("⚠️ 未能构建合适方案，请调整需求重试")
                 return {
                     "success": False,
                     "error": f"经过 {self.state.retry_count} 次重试仍无法构建可行的活动方案",
+                    "user_status_log": self.state.user_status_log,
                     "state": self._get_state_dict(),
                 }
 
             # Step 7: 选择最优方案 + 生成推荐理由
             best_plan = self.choose_best_plan(plans)
+            self.state.add_user_status(
+                f"✅ 方案生成完成！综合评分 {best_plan.score} 分"
+            )
 
             # 生成创意标题（缓存至 state 供后续 confirm_and_execute 复用）
             creative_title = self._build_creative_title(best_plan, request)
@@ -1928,6 +1941,7 @@ class WeekendActivityAgent:
                     "best_plan": self._plan_to_dict(best_plan),
                     "creative_title": creative_title,
                     "requires_confirmation": True,
+                    "user_status_log": self.state.user_status_log,
                     "state": self._get_state_dict(),
                 }
 
@@ -1947,15 +1961,18 @@ class WeekendActivityAgent:
                 "best_plan": self._plan_to_dict(best_plan),
                 "creative_title": creative_title,
                 "execution_result": self._execution_to_dict(execution_result),
+                "user_status_log": self.state.user_status_log,
                 "state": self._get_state_dict(),
             }
 
         except Exception as e:
             self._log("run", f"执行出错: {str(e)}", level="error")
             logger.exception(f"Agent run failed: {e}")
+            self.state.add_user_status(f"❌ 系统异常，请稍后重试")
             return {
                 "success": False,
                 "error": str(e),
+                "user_status_log": self.state.user_status_log,
                 "state": self._get_state_dict(),
             }
 

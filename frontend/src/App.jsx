@@ -738,9 +738,33 @@ function LoadingCard({ slots, accumulatedSlots, guessCardCtx, pendingResult }) {
   const scoreReady = bestPlan.score != null;
   const scoreText = scoreReady ? `${bestPlan.score}分` : "计算中…";
 
+  // 工具调用状态流：逐行动画展示
+  const statusLog = pendingResult?.user_status_log || [];
+  const [visibleLines, setVisibleLines] = React.useState(0);
+  React.useEffect(() => {
+    if (statusLog.length === 0) return;
+    setVisibleLines(0);
+    let i = 0;
+    const timer = setInterval(() => {
+      i++;
+      setVisibleLines(i);
+      if (i >= statusLog.length) clearInterval(timer);
+    }, 280);
+    return () => clearInterval(timer);
+  }, [statusLog]);
+
   return (
     <div className="plan-card loading-card">
       <div className="card-label">正在根据你的偏好规划方案</div>
+      {statusLog.length > 0 && (
+        <div className="status-log">
+          {statusLog.map((line, idx) => (
+            <div key={idx} className={`status-line${idx < visibleLines ? " visible" : ""}`}>
+              {line}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="meta-grid loading-meta-grid">
         <MetaBox label="同行场景" value={companion} />
         <MetaBox label="主要意图" value={intent} />

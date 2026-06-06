@@ -976,6 +976,28 @@ button {
   margin-top: 8px;
 }
 
+/* ── 工具调用状态流 ── */
+.status-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.status-line {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.status-line.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 /* ── Loading 动画：缩小版 meta-box ── */
 .loading-card .meta-grid {
   gap: 6px;
