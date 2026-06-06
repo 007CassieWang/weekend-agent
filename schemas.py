@@ -268,6 +268,7 @@ class CandidatePlan:
     # 风险和推荐理由
     risks: List[str] = field(default_factory=list)
     recommendation_reason: str = ""
+    planning_trace: Optional[Dict[str, Any]] = None  # 推理链：方案为何被选中
 
     # 可行性
     is_feasible: bool = True

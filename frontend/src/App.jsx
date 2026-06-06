@@ -1199,6 +1199,35 @@ function PlanCard({ result, onShare, shareLoading }) {
         );
       })()}
 
+      {/* 推理链 (Planning Trace) */}
+      {plan.planning_trace && (
+        <details className="planning-trace">
+          <summary>
+            <span className="trace-icon">🧠</span>
+            为什么选这个方案？
+          </summary>
+          <div className="trace-body">
+            <p className="trace-summary">{plan.planning_trace.summary}</p>
+            {plan.planning_trace.top_scoring_dimensions && (
+              <div className="trace-dims">
+                <span className="trace-label">高分维度：</span>
+                {plan.planning_trace.top_scoring_dimensions.map((d, i) => (
+                  <span key={i} className="trace-dim">
+                    {d.dimension} {d.score}分
+                  </span>
+                ))}
+              </div>
+            )}
+            {plan.planning_trace.why_winner && (
+              <p className="trace-winner">{plan.planning_trace.why_winner}</p>
+            )}
+            <p className="trace-count">
+              从 {plan.planning_trace.candidates_generated} 个候选方案中选出
+            </p>
+          </div>
+        </details>
+      )}
+
       <div className="plan-actions">
         <button
           className="share-plan-btn"

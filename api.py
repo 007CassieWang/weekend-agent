@@ -12,6 +12,8 @@ v2 更新:
 
 from __future__ import annotations
 
+import os
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -19,7 +21,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from agent_harness import run_agent, run_agent_plan_only
 from prompts import generate_followup_questions
@@ -30,6 +32,19 @@ from orchestration import (
 )
 from receipt import generate_receipt
 
+# ── 安全常量 ──────────────────────────────────────────────
+_MAX_MESSAGE_LENGTH = 500
+_MAX_SHORT_TEXT = 200
+_MAX_PLAN_ID = 100
+_HTML_TAG_RE = re.compile(r"<[^>]*>", re.IGNORECASE)
+
+
+def _sanitize(value: str) -> str:
+    """去除 HTML 标签，防止 XSS 注入。"""
+    if not value:
+        return value
+    return _HTML_TAG_RE.sub("", value).strip()
+
 
 app = FastAPI(title="Weekend Activity Agent API")
 
@@ -38,12 +53,18 @@ FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
+# CORS: 从环境变量读取额外的允许来源（逗号分隔），生产环境同源部署时不需要
+_cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+_extra_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
+if _extra_origins:
+    _cors_origins.extend(origin.strip() for origin in _extra_origins.split(",") if origin.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,47 +76,80 @@ _sessions: Dict[str, Any] = {}
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(default="", max_length=500)
+    message: str = Field(default="", min_length=1, max_length=_MAX_MESSAGE_LENGTH)
     structured_data: Optional[Dict[str, Any]] = None
     locked_constraints: Optional[Dict[str, Any]] = None  # Round 2 锁定的约束
 
+    @field_validator("message", mode="after")
+    @classmethod
+    def sanitize_message(cls, v: str) -> str:
+        return _sanitize(v)
+
 
 class ExecuteRequest(BaseModel):
-    plan_id: str
+    plan_id: str = Field(min_length=1, max_length=_MAX_PLAN_ID)
+
+    @field_validator("plan_id", mode="after")
+    @classmethod
+    def sanitize_plan_id(cls, v: str) -> str:
+        return _sanitize(v)
 
 
 class FollowupRequest(BaseModel):
     companion_context: list[str] = Field(default_factory=list)
-    time_window: Optional[str] = None
-    transportation: Optional[str] = None
+    time_window: Optional[str] = Field(default=None, max_length=50)
+    transportation: Optional[str] = Field(default=None, max_length=50)
     context_modifiers: list[str] = Field(default_factory=list)
     slot_answers: Dict[str, Any] = Field(default_factory=dict)  # 累积的槽位答案 {slot_name: value}
+    location_hint: Optional[str] = Field(default=None, max_length=_MAX_MESSAGE_LENGTH)  # GUESS_CARD 地点上下文
+    locked_location: Optional[str] = Field(default=None, max_length=_MAX_MESSAGE_LENGTH)  # GUESS_CARD 锁定的必含地点
+    primary_intent: Optional[str] = Field(default=None, max_length=100)  # GUESS_CARD 的 primaryIntent
+
+    @field_validator("location_hint", "locked_location", "primary_intent", mode="after")
+    @classmethod
+    def sanitize_optional_str(cls, v: Optional[str]) -> Optional[str]:
+        return _sanitize(v) if v else v
 
 
 class TemplateCardsRequest(BaseModel):
     """Round 1: 泛方案卡片生成请求"""
-    group_type: str = Field(default="", description="同行人类型（companion_context 内部格式）")
-    time_window: Optional[str] = Field(default=None, description="时间窗口（morning/afternoon/full_day）")
-    transportation: Optional[str] = Field(default=None, description="交通方式（driving/transit/taxi/bike_walk）")
-    selected_q_id: Optional[str] = Field(default=None, description="用户选择的小猜问 ID")
+    group_type: str = Field(default="", max_length=50, description="同行人类型（companion_context 内部格式）")
+    time_window: Optional[str] = Field(default=None, max_length=50, description="时间窗口（morning/afternoon/full_day）")
+    transportation: Optional[str] = Field(default=None, max_length=50, description="交通方式（driving/transit/taxi/bike_walk）")
+    selected_q_id: Optional[str] = Field(default=None, max_length=100, description="用户选择的小猜问 ID")
     user_modifications: Optional[Dict[str, Any]] = Field(default=None, description="用户修改的槽位值")
-    additional_query: Optional[str] = Field(default=None, max_length=200, description="用户附加的自然语言输入（搜索词）")
+    additional_query: Optional[str] = Field(default=None, max_length=_MAX_SHORT_TEXT, description="用户附加的自然语言输入（搜索词）")
+
+    @field_validator("additional_query", mode="after")
+    @classmethod
+    def sanitize_query(cls, v: Optional[str]) -> Optional[str]:
+        return _sanitize(v) if v else v
 
 
 class SelectCardRequest(BaseModel):
     """Round 2: 选择泛方案卡片请求"""
-    card_id: str = Field(description="选择的卡片 ID")
-    group_type: str = Field(default="", description="同行人类型")
+    card_id: str = Field(min_length=1, max_length=_MAX_PLAN_ID, description="选择的卡片 ID")
+    group_type: str = Field(default="", max_length=50, description="同行人类型")
     current_slots: Dict[str, Any] = Field(default_factory=dict, description="当前已收集的槽位")
-    user_additional_input: Optional[str] = Field(default=None, max_length=200, description="用户附加输入")
+    user_additional_input: Optional[str] = Field(default=None, max_length=_MAX_SHORT_TEXT, description="用户附加输入")
+
+    @field_validator("card_id", "user_additional_input", mode="after")
+    @classmethod
+    def sanitize_strings(cls, v: Optional[str]) -> Optional[str]:
+        return _sanitize(v) if v else v
 
 
 class ReceiptRequest(BaseModel):
     """Round 4: 小票生成请求"""
-    plan_id: str = Field(description="已确认的方案 ID")
+    plan_id: str = Field(min_length=1, max_length=_MAX_PLAN_ID, description="已确认的方案 ID")
     plan_data: Optional[Dict[str, Any]] = Field(default=None, description="方案完整数据")
     locked_constraints: Optional[Dict[str, Any]] = Field(default=None, description="锁定的约束条件")
-    user_feedback: Optional[str] = Field(default=None, max_length=200, description="用户反馈")
+    user_feedback: Optional[str] = Field(default=None, max_length=_MAX_SHORT_TEXT, description="用户反馈")
+
+    @field_validator("plan_id", "user_feedback", mode="after")
+    @classmethod
+    def sanitize_strings(cls, v: Optional[str]) -> Optional[str]:
+        return _sanitize(v) if v else v
 
 
 @app.get("/api/health")
@@ -124,14 +178,14 @@ def chat(payload: ChatRequest) -> Dict[str, Any]:
         locked.update(payload.structured_data.get("locked_constraints") or {})
 
     if not user_input and not locked:
-        raise HTTPException(status_code=400, detail="message is required")
+        raise HTTPException(status_code=400, detail="请提供消息内容")
 
     # 如果只有 locked_constraints 没有 message，合成消息
     if not user_input and locked:
         user_input = _synthesize_from_locked_constraints(locked)
 
     if not user_input:
-        raise HTTPException(status_code=400, detail="message is required")
+        raise HTTPException(status_code=400, detail="请提供消息内容")
 
     try:
         # 默认 plan_only: 只生成方案，不执行
@@ -154,7 +208,7 @@ def execute_plan(payload: ExecuteRequest) -> Dict[str, Any]:
     """
     plan_id = payload.plan_id.strip()
     if not plan_id:
-        raise HTTPException(status_code=400, detail="plan_id is required")
+        raise HTTPException(status_code=400, detail="请提供方案编号")
 
     # 从缓存中获取原始请求文本
     cached = _sessions.get(plan_id, {})
@@ -191,7 +245,12 @@ def suggest_followup(payload: FollowupRequest) -> Dict[str, Any]:
         "slot_answers": payload.slot_answers,
     }
     try:
-        return generate_followup_questions(collected)
+        return generate_followup_questions(
+            collected,
+            location_hint=payload.location_hint,
+            locked_location=payload.locked_location,
+            primary_intent=payload.primary_intent if hasattr(payload, 'primary_intent') else None,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -205,7 +264,7 @@ def template_cards(payload: TemplateCardsRequest) -> Dict[str, Any]:
     作为最后一轮意图收敛——用户选择一张卡片后进入 Round 2 锁定约束。
     """
     if not payload.group_type:
-        raise HTTPException(status_code=400, detail="group_type is required")
+        raise HTTPException(status_code=400, detail="请提供同行人类型")
 
     # 检查是否可跳步
     if payload.additional_query:
@@ -250,7 +309,7 @@ def select_card(payload: SelectCardRequest) -> Dict[str, Any]:
     将 locked_constraints 通过 structured_data 或 locked_constraints 字段透传。
     """
     if not payload.card_id:
-        raise HTTPException(status_code=400, detail="card_id is required")
+        raise HTTPException(status_code=400, detail="请提供卡片编号")
 
     try:
         result = select_card_and_lock(
@@ -441,11 +500,18 @@ def receipt(payload: ReceiptRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# ---- SPA fallback: 非 /api 路径返回 index.html ----
+# ---- SPA fallback: 非 /api 路径优先返回静态文件，否则返回 index.html ----
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
-    """SPA 回退路由：非 API 路径返回前端 index.html"""
+    """优先返回前端静态文件，找不到则回退到 index.html（SPA 路由）"""
+    if not FRONTEND_DIST.exists():
+        return {"message": "Frontend not built. Run: cd frontend && npm run build"}
+
+    # 先尝试匹配 dist 中的静态文件（如 kangaroo.png）
+    static_path = FRONTEND_DIST / full_path
+    if full_path and static_path.is_file():
+        return FileResponse(static_path)
+
+    # 否则返回 index.html（SPA 客户端路由）
     index_path = FRONTEND_DIST / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
-    return {"message": "Frontend not built. Run: cd frontend && npm run build"}
+    return FileResponse(index_path)

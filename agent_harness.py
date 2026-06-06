@@ -1568,6 +1568,9 @@ class WeekendActivityAgent:
             "score": best_plan.score
         })
 
+        # 生成推理链（Planning Trace）
+        best_plan.planning_trace = self._build_planning_trace(best_plan, plans)
+
         # 生成风险提示
         risks = []
         for activity in best_plan.activities:
@@ -1589,6 +1592,53 @@ class WeekendActivityAgent:
         )
 
         return best_plan
+
+    def _build_planning_trace(
+        self,
+        best_plan: CandidatePlan,
+        all_plans: List[CandidatePlan],
+    ) -> Dict[str, Any]:
+        """生成推理链，解释为何该方案被选中。"""
+        trace: Dict[str, Any] = {
+            "candidates_generated": len(all_plans),
+            "selection_method": "multi_dimension_scoring",
+        }
+
+        # Top 贡献维度
+        breakdown = best_plan.score_breakdown
+        if breakdown and breakdown.scores:
+            sorted_dims = sorted(breakdown.scores.items(), key=lambda x: x[1], reverse=True)
+            top_dims = [
+                {"dimension": dim, "score": round(score, 1)}
+                for dim, score in sorted_dims[:3] if score > 0
+            ]
+            trace["top_scoring_dimensions"] = top_dims
+
+        # 与 Runner-up 的对比
+        if len(all_plans) >= 2:
+            runner_up = all_plans[1]
+            gap = round(best_plan.score - runner_up.score, 1)
+            trace["runner_up_gap"] = gap
+            trace["runner_up_plan_id"] = runner_up.plan_id
+            if gap > 0:
+                trace["why_winner"] = f"总分领先第2名 {gap} 分"
+            else:
+                trace["why_winner"] = "与第2名分数相同，按活动丰富度优先选择"
+
+        # 关键决策摘要
+        reasons = []
+        if breakdown:
+            top = sorted_dims[0] if sorted_dims else ("综合", 0)
+            reasons.append(f"「{top[0]}」维度表现最优（{top[1]:.0f}分）")
+        if best_plan.total_duration_minutes:
+            hours = best_plan.total_duration_minutes / 60
+            reasons.append(f"总时长约 {hours:.1f} 小时")
+        if best_plan.restaurant:
+            reasons.append(f"搭配餐厅：{best_plan.restaurant.name}")
+
+        trace["summary"] = "；".join(reasons) if reasons else "综合评分最优"
+
+        return trace
 
     # ==================== Step 9: 执行方案 ====================
 
@@ -2427,7 +2477,8 @@ class WeekendActivityAgent:
             "score": plan.score,
             "score_breakdown": plan.score_breakdown.to_dict(),
             "risks": plan.risks,
-            "recommendation_reason": plan.recommendation_reason
+            "recommendation_reason": plan.recommendation_reason,
+            "planning_trace": plan.planning_trace
         }
 
     def _execution_to_dict(self, result: ExecutionResult) -> Dict[str, Any]:
