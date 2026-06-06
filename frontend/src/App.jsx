@@ -1661,6 +1661,7 @@ export default function App() {
 
       const data = await response.json();
       const cards = data?.data?.cards || [];
+      setGuessSentences([]); // 新内容已就绪，清空小猜问
       if (cards.length > 0) {
         setTemplateCards(cards);
         goToStep("templates");
@@ -1848,16 +1849,17 @@ export default function App() {
 
     setDraft("");
     setError("");
-    setGuessSentences([]);
     setMessages((prev) => [...prev, { role: "user", content: message }]);
 
     if (guessCardCtx) {
       // GUESS_CARD 快捷路径：跳过泛方案卡片，直接生成个性化最终方案
       setLoading(true);
       goToStep("result");
+      setGuessSentences([]); // LoadingCard 即刻接管，可以清空
       await submitGuessCardPlan(message);
     } else {
       // 普通路径：拉取泛方案卡片（Round 1）
+      // 不清空 guessSentences，等模板卡片/LoadingCard 出现后再清
       fetchTemplateCards(message);
     }
   }
