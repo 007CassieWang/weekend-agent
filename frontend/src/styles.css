@@ -1014,6 +1014,18 @@ button {
   word-break: break-word;
 }
 
+/* 分数揭晓弹跳动效 */
+.loading-card .meta-box.score-revealed strong {
+  color: var(--accent-strong);
+  animation: scorePopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes scorePopIn {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* 高亮扫光 */
 .loading-card .meta-box::after {
   content: '';

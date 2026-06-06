@@ -723,7 +723,7 @@ const TIME_WINDOW_DURATION = {
   now: "约2-3小时",
 };
 
-function LoadingCard({ slots, accumulatedSlots, guessCardCtx }) {
+function LoadingCard({ slots, accumulatedSlots, guessCardCtx, pendingResult }) {
   const compContext = (slots?.companion_context || []).filter(c => c && c !== "unknown");
   const companion = compContext.length > 0
     ? compContext.map(c => LABELS[c] || c).join("、")
@@ -734,6 +734,10 @@ function LoadingCard({ slots, accumulatedSlots, guessCardCtx }) {
 
   const duration = TIME_WINDOW_DURATION[slots?.time_window] || "约3-4小时";
 
+  const bestPlan = pendingResult?.best_plan || {};
+  const scoreReady = bestPlan.score != null;
+  const scoreText = scoreReady ? `${bestPlan.score}分` : "计算中…";
+
   return (
     <div className="plan-card loading-card">
       <div className="card-label">正在根据你的偏好规划方案</div>
@@ -741,15 +745,15 @@ function LoadingCard({ slots, accumulatedSlots, guessCardCtx }) {
         <MetaBox label="同行场景" value={companion} />
         <MetaBox label="主要意图" value={intent} />
         <MetaBox label="预计时长" value={duration} />
-        <MetaBox label="匹配分" value="计算中…" />
+        <MetaBox label="匹配分" value={scoreText} className={scoreReady ? "score-revealed" : ""} />
       </div>
     </div>
   );
 }
 
-function MetaBox({ label: title, value }) {
+function MetaBox({ label: title, value, className }) {
   return (
-    <div className="meta-box">
+    <div className={`meta-box${className ? " " + className : ""}`}>
       <span>{title}</span>
       <strong>{value || "待确认"}</strong>
     </div>
@@ -1337,6 +1341,7 @@ export default function App() {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pendingResult, setPendingResult] = useState(null); // 方案返回但尚未切换卡片时暂存
   const [error, setError] = useState("");
   const scrollRef = useRef(null);
 
@@ -1700,11 +1705,15 @@ export default function App() {
       }
 
       const result = await chatRes.json();
+      // 先展示真实分数在 LoadingCard 上，再切换为 PlanCard
+      setPendingResult(result);
+      await new Promise((r) => setTimeout(r, 1200));
       setMessages((prev) => [...prev, { role: "agent", result }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "方案生成失败");
     } finally {
       setLoading(false);
+      setPendingResult(null);
       setSelectedCardId(null);
     }
   }
@@ -1767,11 +1776,15 @@ export default function App() {
       }
 
       const result = await chatRes.json();
+      // 先展示真实分数在 LoadingCard 上，再切换为 PlanCard
+      setPendingResult(result);
+      await new Promise((r) => setTimeout(r, 1200));
       setMessages((prev) => [...prev, { role: "agent", result }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "方案生成失败");
     } finally {
       setLoading(false);
+      setPendingResult(null);
       setGuessCardCtx(null);
     }
   }
@@ -1821,11 +1834,15 @@ export default function App() {
       }
 
       const result = await response.json();
+      // 先展示真实分数在 LoadingCard 上，再切换为 PlanCard
+      setPendingResult(result);
+      await new Promise((r) => setTimeout(r, 1200));
       setMessages((prev) => [...prev, { role: "agent", result }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "请求失败");
     } finally {
       setLoading(false);
+      setPendingResult(null);
     }
   }
 
@@ -1980,7 +1997,7 @@ export default function App() {
           )}
 
           {loading && (step === "result" || step === "followup") && (
-            <LoadingCard slots={slots} accumulatedSlots={accumulatedSlots} guessCardCtx={guessCardCtx} />
+            <LoadingCard slots={slots} accumulatedSlots={accumulatedSlots} guessCardCtx={guessCardCtx} pendingResult={pendingResult} />
           )}
         </div>
         <FlyingSentence animatingSentence={animatingSentence} />
