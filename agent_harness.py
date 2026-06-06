@@ -1515,9 +1515,9 @@ class WeekendActivityAgent:
                                 bonus += 20
                                 break
                 if bonus > 0:
-                    plan.score += bonus
+                    plan.score = min(plan.score + bonus, 100.0)
                     self._log("score_plans",
-                              f"保证项加成: {plan.plan_id} +{bonus}分 → {plan.score}分")
+                              f"保证项加成: {plan.plan_id} +{bonus}分 → {plan.score}分（封顶100）")
 
             # 重新排序
             scored_plans.sort(key=lambda x: x.score, reverse=True)
