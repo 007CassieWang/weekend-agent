@@ -10,6 +10,7 @@ v2 更新:
 
 import json
 import logging
+import re
 import yaml
 import uuid
 from typing import List, Optional, Dict, Any, Tuple
@@ -28,7 +29,7 @@ from tools import (
     check_route_time, check_availability, book_activity,
     book_restaurant, order_item, send_plan
 )
-from prompts import parse_request, get_recommendation_reason
+from prompts import parse_request, get_recommendation_reason, generate_creative_title
 from scoring import score_plans, calculate_plan_score
 
 # 结构化日志
@@ -129,6 +130,13 @@ def _resolve_time_slot(time_slot: Optional[str]) -> Dict[str, Any]:
         return {"start_time": "10:00", "duration_hours": 8}
 
     return {}
+
+
+def _enrich_restaurant_dict(base: Optional[Dict[str, Any]], recommendations: list) -> Optional[Dict[str, Any]]:
+    """为餐厅 dict 附加 recommendations 字段。"""
+    if base is None:
+        return None
+    return {**base, "recommendations": recommendations}
 
 
 class WeekendActivityAgent:
@@ -379,10 +387,28 @@ class WeekendActivityAgent:
                 request.distance_preference = "nearby"
             if locked.get("travel_radius") == "far":
                 request.distance_preference = "far"
-            if locked.get("budget") and not request.budget_level:
-                budget_map = {"low": BudgetLevel.LOW, "medium": BudgetLevel.MEDIUM, "high": BudgetLevel.HIGH}
-                if mapped := budget_map.get(locked["budget"]):
+            # 预算：支持 budget 和 budget_level 两种 key（兼容不同来源）
+            budget_val = locked.get("budget_level") or locked.get("budget")
+            if budget_val and not request.budget_level:
+                budget_map = {"low": BudgetLevel.LOW, "medium": BudgetLevel.MEDIUM, "medium_high": BudgetLevel.MEDIUM, "high": BudgetLevel.HIGH}
+                if mapped := budget_map.get(str(budget_val).lower() if budget_val else ""):
                     request.budget_level = mapped
+                    self._log("complete_missing_slots", f"locked_constraints 覆盖 budget_level: {budget_val} → {mapped}")
+            # 同行人类型映射：group_type（中文字符串）→ CompanionsType
+            group_type = locked.get("group_type", "")
+            if group_type and not request.companions:
+                group_map = {
+                    "家庭出行": CompanionsType.FAMILY_WITH_KIDS,
+                    "朋友聚会": CompanionsType.FRIENDS,
+                    "情侣约会": CompanionsType.COUPLE,
+                    "独自一人": CompanionsType.SOLO,
+                }
+                if mapped_companion := group_map.get(group_type):
+                    request.companions = mapped_companion
+                    self._log("complete_missing_slots", f"locked_constraints 覆盖 companions: {group_type} → {mapped_companion}")
+            # 活动偏好：activity_preference（如 "indoor"/"outdoor"）
+            if locked.get("activity_preference") and not request.activity_preference:
+                request.activity_preference = locked["activity_preference"]
             if locked.get("intent_mode") and not request.activity_preference:
                 intent_to_activity = {
                     "relax": "relax", "interact": "entertainment", "novelty": "art",
@@ -392,6 +418,18 @@ class WeekendActivityAgent:
                     request.activity_preference = activity
             if locked.get("max_travel_time") and locked.get("max_travel_time", 0) < 30:
                 request.distance_preference = "nearby"
+
+            # 合并 locked_constraints 中的 context_modifiers 和 hard_constraints 到 request
+            if locked.get("context_modifiers"):
+                existing_mods = set(request.context_modifiers or [])
+                for mod in locked["context_modifiers"]:
+                    if mod not in existing_mods:
+                        request.context_modifiers.append(mod)
+            if locked.get("hard_constraints"):
+                existing_hards = set(request.hard_constraints or [])
+                for hc in locked["hard_constraints"]:
+                    if hc not in existing_hards:
+                        request.hard_constraints.append(hc)
 
         self._log("complete_missing_slots", "信息补全完成", request.to_dict())
 
@@ -680,6 +718,19 @@ class WeekendActivityAgent:
             if "parking_needed" in modifiers and getattr(item, "parking_available", False):
                 label_bonus += 18
 
+            # GUESS_CARD 地点锁定：优先选择位于锁定地点附近的供给
+            must_loc = locked.get("must_include_location", "")
+            if must_loc:
+                loc = getattr(item, "location", None)
+                loc_district = getattr(loc, "district", "") if loc else ""
+                loc_addr = getattr(loc, "address", "") if loc else ""
+                item_name = getattr(item, "name", "")
+                item_desc = getattr(item, "description", "")
+                item_tags = " ".join(getattr(item, "tags", []) or [])
+                item_text = f"{loc_district} {loc_addr} {item_name} {item_desc} {item_tags}"
+                if must_loc in item_text:
+                    label_bonus += 80  # 强力优先：确保猜问卡提及的地点/餐厅排在最前面
+
             return (
                 avoid_penalty + preferred_rank + label_penalty - label_bonus + cuisine_match_bonus,
                 getattr(item, "distance_km", 999),
@@ -743,6 +794,196 @@ class WeekendActivityAgent:
 
         # 判断是否全天模式
         locked = getattr(self.state, "locked_constraints", {}) or {}
+
+        # GUESS_CARD 地点锁定：确保 must_include_location 对应的地点进入活动列表
+        must_loc = locked.get("must_include_location", "")
+        if must_loc:
+            # 活动：匹配 → 提升到最前；不匹配 → 创建合成活动
+            matched_acts = []
+            other_acts = []
+            for a in activities:
+                if must_loc in (a.name or "") or must_loc in (a.location.name or ""):
+                    matched_acts.append(a)
+                else:
+                    other_acts.append(a)
+            if matched_acts:
+                activities = matched_acts + other_acts
+                self._log("build_candidate_plans", f"GUESS_CARD 地点 '{must_loc}' 匹配 {len(matched_acts)} 个活动，已提升到最前")
+            else:
+                # 创建合成活动，确保方案中一定包含该地点
+                synthetic = Activity(
+                    id=f"guesscard_{must_loc}",
+                    name=must_loc,
+                    type="citywalk" if "公园" in must_loc or "路" in must_loc else "cultural_site",
+                    location=Location(name=must_loc, address=must_loc, district=""),
+                    distance_km=4.0,
+                    duration_minutes=90,
+                    suggested_duration_minutes=90,
+                    child_friendly=True,
+                    group_friendly=True,
+                    price_per_person=0,
+                    reservation_available=False,
+                    need_booking=False,
+                    description=f"精选推荐地点：{must_loc}，一个值得探索的好去处",
+                    tags=["拍照打卡"] if "公园" in must_loc or "上生" in must_loc else [],
+                )
+                activities = [synthetic] + list(activities)
+                self._log("build_candidate_plans", f"GUESS_CARD 锁定地点 '{must_loc}' 已添加为合成活动")
+
+            # 餐厅：匹配 → 提升到最前，确保 plan builder 的 restaurants[:2] 能选中
+            matched_rests = []
+            other_rests = []
+            for r in restaurants:
+                loc_text = f"{r.name} {(r.location.name or '')} {(r.location.address or '')} {(r.location.district or '')} {getattr(r, 'description', '')}"
+                if must_loc in loc_text:
+                    matched_rests.append(r)
+                else:
+                    other_rests.append(r)
+            if matched_rests:
+                restaurants = matched_rests + other_rests
+                self._log("build_candidate_plans", f"GUESS_CARD 地点 '{must_loc}' 匹配 {len(matched_rests)} 家餐厅: {[r.name for r in matched_rests]}")
+            else:
+                self._log("build_candidate_plans", f"GUESS_CARD 地点 '{must_loc}' 未匹配任何餐厅，将继续使用搜索结果", level="warning")
+
+        # ── GUESS_CARD 保证项：确保 guaranteed_activities / guaranteed_restaurants 必出 ──
+        # 这些是从 GUESS_CARD 的 implied_constraints 传入的，描述了开屏卡片中展示的具体 POI。
+        # 逻辑：尝试在搜索结果中匹配；匹配到就提升到最前，没匹配到就创建合成 POI 注入。
+        guaranteed_activities: List[Dict[str, Any]] = locked.get("guaranteed_activities", []) or []
+        guaranteed_restaurants_list: List[Dict[str, Any]] = locked.get("guaranteed_restaurants", []) or []
+
+        for ga in guaranteed_activities:
+            ga_name = str(ga.get("name", "") or "")
+            ga_type = str(ga.get("type", "") or "")
+            ga_location = str(ga.get("location_hint", "") or "")
+            ga_tags = [t for t in list(ga.get("tags", []) or []) if isinstance(t, str)]
+            ga_desc = str(ga.get("description", "") or "")
+            ga_duration = int(ga.get("duration_minutes", 90))
+
+            # 尝试匹配：name 或 type+location_hint 出现在现有活动中
+            matched_acts = []
+            other_acts = []
+            for a in activities:
+                a_name = str(getattr(a, "name", "") or "")
+                a_type = str(getattr(a, "type", "") or "")
+                a_loc_addr = str(getattr(a, "location", None).address if getattr(a, "location", None) else "")
+                a_loc_district = str(getattr(a, "location", None).district if getattr(a, "location", None) else "")
+                a_text = f"{a_name} {a_type} {a_loc_addr} {a_loc_district}"
+                # 匹配策略：名称相似 / 地点关键词在地址中 / 类型一致 + 地点包含
+                loc_match = bool(ga_location) and (
+                    ga_location in a_loc_addr or ga_location in a_loc_district or ga_location in a_name)
+                type_match = bool(ga_type) and ga_type in a_type
+                name_overlap = bool(ga_name) and any(
+                    len(part) >= 2 and part in a_name for part in ga_name.replace("·", " ").replace("「", "").replace("」", "").split())
+                if name_overlap or (type_match and loc_match) or (ga_name and ga_name in a_text):
+                    matched_acts.append(a)
+                else:
+                    other_acts.append(a)
+            if matched_acts:
+                activities = matched_acts + other_acts
+                self._log("build_candidate_plans",
+                          f"保证活动 '{ga_name}' 匹配 {len(matched_acts)} 个: {[a.name for a in matched_acts]}")
+            else:
+                # 创建合成活动
+                synthetic = Activity(
+                    id=f"guaranteed_act_{ga_name.replace(' ', '_')[:30]}",
+                    name=ga_name,
+                    type=ga_type if ga_type else "cultural_site",
+                    location=Location(
+                        name=ga_name,
+                        address=ga_location if ga_location else ga_name,
+                        district=ga_location if ga_location else "",
+                    ),
+                    distance_km=4.0,
+                    duration_minutes=ga_duration,
+                    suggested_duration_minutes=ga_duration,
+                    child_friendly=True,
+                    group_friendly=True,
+                    price_per_person=0,
+                    reservation_available=False,
+                    need_booking=False,
+                    description=ga_desc if ga_desc else f"精选推荐活动：{ga_name}，适合周末放松体验",
+                    tags=ga_tags,
+                )
+                activities = [synthetic] + list(activities)
+                self._log("build_candidate_plans", f"保证活动 '{ga_name}' 未匹配，已创建合成活动")
+
+        for gr in guaranteed_restaurants_list:
+            gr_name = str(gr.get("name", "") or "")
+            gr_cuisine = str(gr.get("cuisine_type", "") or "")
+            gr_location = str(gr.get("location_hint", "") or "")
+            gr_tags = list(gr.get("tags", []) or [])
+            gr_desc = str(gr.get("description", "") or "")
+            gr_budget = str(gr.get("budget_level", "medium") or "medium")
+            # 预算 → 人均价格映射
+            price_map = {"low": 80, "medium": 150, "medium_high": 220, "high": 320}
+            gr_price = int(price_map.get(gr_budget, 150))
+
+            # 尝试匹配：name 关键词或 cuisine_type + location_hint 出现在现有餐厅中
+            matched_rests = []
+            other_rests = []
+            for r in restaurants:
+                r_name = str(getattr(r, "name", "") or "")
+                r_cuisine = str(getattr(r, "cuisine_type", "") or "")
+                r_addr = str(getattr(r, "location", None).address if getattr(r, "location", None) else "")
+                r_district = str(getattr(r, "location", None).district if getattr(r, "location", None) else "")
+                r_tags_raw = getattr(r, "tags", [])
+                r_tags_list = list(r_tags_raw) if isinstance(r_tags_raw, (list, tuple)) else []
+                r_text = f"{r_name} {r_cuisine} {r_addr} {r_district}"
+                # 匹配策略：名称关键词重叠 / 菜系一致+地点 / 标签命中 / 纯地点兜底
+                cuisine_match = bool(gr_cuisine) and (
+                    gr_cuisine in r_cuisine or r_cuisine in gr_cuisine)
+                loc_match = bool(gr_location) and (
+                    gr_location in r_addr or gr_location in r_district or gr_location in r_name)
+                tag_match = bool(gr_tags) and any(
+                    any(tag in t for t in r_tags_list) for tag in gr_tags if isinstance(tag, str))
+                name_match = bool(gr_name) and any(
+                    len(part) >= 2 and part in r_name for part in gr_name.replace("·", " ").split())
+                # 无菜系指定 + 有地点 → 地点匹配即可（如"世纪公园附近随便吃"）
+                location_fallback = (not gr_cuisine) and loc_match
+                if name_match or (cuisine_match and loc_match) or (tag_match and loc_match) or location_fallback:
+                    matched_rests.append(r)
+                else:
+                    other_rests.append(r)
+            if matched_rests:
+                restaurants = matched_rests + other_rests
+                self._log("build_candidate_plans",
+                          f"保证餐厅 '{gr_name or gr_location}' 匹配 {len(matched_rests)} 家: {[r.name for r in matched_rests]}")
+            else:
+                # 创建合成餐厅：name 为空说明 GUESS_CARD 未指定具体餐馆，
+                # 不再用生硬的"地点+类型"拼接名，直接用描述信息作为店名
+                if gr_name:
+                    synth_name = gr_name
+                    synth_type = gr_cuisine if gr_cuisine else "中餐"
+                else:
+                    # 无指定名称：用描述的前 10 个字截断作为自然店名兜底
+                    desc_short = gr_desc[:10].rstrip("，,。 ") if gr_desc else "特色餐厅"
+                    synth_name = desc_short if len(desc_short) >= 3 else "特色餐厅"
+                    synth_type = "休闲简餐"
+                synth_id = f"guaranteed_rest_{synth_name.replace(' ', '_')[:30]}"
+                synthetic = Restaurant(
+                    id=synth_id,
+                    name=synth_name,
+                    type=synth_type,
+                    cuisine_type=synth_type,
+                    location=Location(
+                        name=synth_name,
+                        address=gr_location if gr_location else synth_name,
+                        district=gr_location if gr_location else "",
+                    ),
+                    distance_km=3.0,
+                    child_friendly=True,
+                    diet_friendly=False,
+                    group_friendly=True,
+                    price_per_person=gr_price,
+                    queue_minutes=0,
+                    reservation_available=True,
+                    need_booking=False,
+                    description=gr_desc if gr_desc else f"精选推荐餐厅：{gr_name}，值得一试的好味道",
+                    tags=gr_tags,
+                )
+                restaurants = [synthetic] + list(restaurants)
+                self._log("build_candidate_plans", f"保证餐厅 '{gr_name}' 未匹配，已创建合成餐厅")
+
         is_full_day = (
             locked.get("time_slot") == "full_day"
             or locked.get("time_window") == "full_day"
@@ -1211,6 +1452,76 @@ class WeekendActivityAgent:
             diet_goal=self.state.user_request.diet_goal,
         )
 
+        # ── GUESS_CARD 保证项评分加成 ──
+        # 包含 guaranteed_restaurants/guaranteed_activities 的方案获得额外加分，
+        # 确保在最终排名中优先展示，兑现开屏 GUESS_CARD 中的地点/餐馆承诺。
+        locked = getattr(self.state, "locked_constraints", {}) or {}
+        # 保证项信息：同时保留 name、location、cuisine 用于多维度匹配
+        guaranteed_rest_infos: list = [
+            {
+                "name": str(gr.get("name", "") or ""),
+                "location": str(gr.get("location_hint", "") or ""),
+                "cuisine": str(gr.get("cuisine_type", "") or ""),
+            }
+            for gr in (locked.get("guaranteed_restaurants", []) or [])
+        ]
+        guaranteed_act_infos: list = [
+            {
+                "name": str(ga.get("name", "") or ""),
+                "location": str(ga.get("location_hint", "") or ""),
+            }
+            for ga in (locked.get("guaranteed_activities", []) or [])
+        ]
+
+        if guaranteed_rest_infos or guaranteed_act_infos:
+            for plan in scored_plans:
+                bonus = 0
+                # 餐厅命中加分
+                if guaranteed_rest_infos and plan.restaurant:
+                    plan_rest_name = str(getattr(plan.restaurant, "name", "") or "")
+                    plan_cuisine = str(getattr(plan.restaurant, "cuisine_type", "") or "")
+                    plan_addr = str(getattr(plan.restaurant, "location", None).address if getattr(plan.restaurant, "location", None) else "")
+                    plan_district = str(getattr(plan.restaurant, "location", None).district if getattr(plan.restaurant, "location", None) else "")
+                    for gr in guaranteed_rest_infos:
+                        gname, gloc, gcuisine = gr["name"], gr["location"], gr["cuisine"]
+                        # 名称匹配
+                        if gname and (gname in plan_rest_name or plan_rest_name in gname):
+                            bonus += 25
+                            break
+                        # 菜系匹配
+                        if gcuisine and (gcuisine in plan_cuisine or plan_cuisine in gcuisine):
+                            bonus += 25
+                            break
+                        # 地点匹配（无菜系指定时纯地点兜底，如"世纪公园附近"）
+                        if gloc and (gloc in plan_addr or gloc in plan_district):
+                            bonus += 25
+                            break
+                # 晚餐餐厅命中（全天方案）
+                if guaranteed_rest_infos and plan.dinner_restaurant:
+                    dinner_name = str(getattr(plan.dinner_restaurant, "name", "") or "")
+                    for gr in guaranteed_rest_infos:
+                        gname = gr["name"]
+                        if gname and (gname in dinner_name or dinner_name in gname):
+                            bonus += 15
+                            break
+                # 活动命中加分
+                if guaranteed_act_infos and plan.activities:
+                    for act in plan.activities:
+                        act_name = str(getattr(act, "name", "") or "")
+                        for ga in guaranteed_act_infos:
+                            gname, gloc = ga["name"], ga["location"]
+                            if (gname and (gname in act_name or act_name in gname)) or \
+                               (gloc and gloc in act_name):
+                                bonus += 20
+                                break
+                if bonus > 0:
+                    plan.score += bonus
+                    self._log("score_plans",
+                              f"保证项加成: {plan.plan_id} +{bonus}分 → {plan.score}分")
+
+            # 重新排序
+            scored_plans.sort(key=lambda x: x.score, reverse=True)
+
         for plan in scored_plans:
             self._log(
                 "score_plans",
@@ -1405,7 +1716,7 @@ class WeekendActivityAgent:
         # 订单
         for order in result.order_status:
             status = "✓ 成功" if order.success else "✗ 失败"
-            item_name = {"cake": "蛋糕", "flower": "鲜花", "gift": "礼物"}.get(order.item_type, order.item_type)
+            item_name = {"cake": "蛋糕", "flower": "鲜花", "gift": "礼物"}.get(order.item_type, "精选商品")
             summary_parts.append(f"{item_name}下单: {status}")
 
         # 消息
@@ -1596,6 +1907,10 @@ class WeekendActivityAgent:
             # Step 7: 选择最优方案 + 生成推荐理由
             best_plan = self.choose_best_plan(plans)
 
+            # 生成创意标题（缓存至 state 供后续 confirm_and_execute 复用）
+            creative_title = self._build_creative_title(best_plan, request)
+            self.state.creative_title = creative_title
+
             # ===== Draft/Commit 分离 =====
             if execute_mode == "plan_only":
                 # 仅生成方案，等待用户确认
@@ -1611,6 +1926,7 @@ class WeekendActivityAgent:
                     "candidate_plans_count": len(plans),
                     "all_plans": [self._plan_to_dict(p) for p in plans[:3]],
                     "best_plan": self._plan_to_dict(best_plan),
+                    "creative_title": creative_title,
                     "requires_confirmation": True,
                     "state": self._get_state_dict(),
                 }
@@ -1629,6 +1945,7 @@ class WeekendActivityAgent:
                 "candidate_plans_count": len(plans),
                 "all_plans": [self._plan_to_dict(p) for p in plans[:3]],
                 "best_plan": self._plan_to_dict(best_plan),
+                "creative_title": creative_title,
                 "execution_result": self._execution_to_dict(execution_result),
                 "state": self._get_state_dict(),
             }
@@ -1682,6 +1999,7 @@ class WeekendActivityAgent:
                 "phase": "executed",
                 "plan_id": plan.plan_id,
                 "best_plan": self._plan_to_dict(plan),
+                "creative_title": getattr(self.state, "creative_title", ""),
                 "execution_result": self._execution_to_dict(execution_result),
                 "state": self._get_state_dict(),
             }
@@ -1692,6 +2010,331 @@ class WeekendActivityAgent:
                 "error": str(e),
                 "state": self._get_state_dict(),
             }
+
+    def _build_creative_title(self, plan: CandidatePlan, request: UserRequest) -> str:
+        """根据最优方案和用户请求生成创意标题（调用 DeepSeek）。"""
+        locations: List[str] = []
+        for a in plan.activities:
+            locations.append(a.name)
+        if plan.restaurant:
+            locations.append(plan.restaurant.name)
+        if plan.dinner_restaurant:
+            locations.append(plan.dinner_restaurant.name)
+
+        # 场景类型映射
+        companion_map = {
+            "family_with_children": "family", "family_with_elderly": "family",
+            "friends": "friends", "couple": "couple", "solo": "solo",
+            "colleagues": "friends", "pet": "family",
+        }
+        scene_type = "friends"
+        for c in (request.companion_context or []):
+            scene_type = companion_map.get(c, "friends")
+            break
+
+        # 氛围关键词
+        vibe_parts = []
+        if request.primary_intent:
+            vibe_parts.append(request.primary_intent)
+        if request.activity_preference:
+            vibe_parts.append(request.activity_preference)
+        vibe_parts.extend(request.context_modifiers[:2] or [])
+
+        # 同行人详情
+        detail_parts = []
+        if request.people_count:
+            detail_parts.append(f"{request.people_count}人")
+        if request.has_child and request.child_age:
+            detail_parts.append(f"孩子{request.child_age}岁")
+        elif request.has_child:
+            detail_parts.append("带娃")
+
+        return generate_creative_title(
+            locations=locations,
+            scene_type=scene_type,
+            vibe=" ".join(vibe_parts) if vibe_parts else "",
+            group_detail="，".join(detail_parts) if detail_parts else "",
+        )
+
+    def _get_poi_recommendations(self, poi: Any, is_activity: bool = True) -> List[Dict[str, Any]]:
+        """统一推荐引擎：融合多种子信息类型，按用户槽位打分、穿插排序。
+
+        活动 POI：sub_facilities + seasonal_events + coupons + nearby_dining
+        餐厅 POI：coupons + signature_dishes
+        """
+        locked = getattr(self.state, "locked_constraints", {}) or {}
+        group_type = locked.get("group_type", "")
+        child_age = locked.get("child_age")
+        budget = locked.get("budget", "")
+        people_count = locked.get("people_count", 0)
+        context_modifiers = set(locked.get("context_modifiers", []) or [])
+        hard_constraints = set(locked.get("hard_constraints", []) or [])
+
+        budget_max = {"low": 80, "medium": 200, "high": 9999}.get(
+            str(budget).lower() if budget else "", 200
+        )
+
+        all_items = []  # (score, content_type, raw_dict)
+
+        # ---- 活动 POI：收集 4 种类型 ----
+        if is_activity:
+            # sub_facilities
+            for sf in (getattr(poi, "sub_facilities", None) or []):
+                if not isinstance(sf, dict):
+                    continue
+                score = self._score_item(sf, "sub", group_type, child_age,
+                                         context_modifiers, hard_constraints, budget_max, people_count)
+                all_items.append((score, "sub", sf))
+
+            # seasonal_events
+            for ev in (getattr(poi, "seasonal_events", None) or []):
+                if not isinstance(ev, dict):
+                    continue
+                score = self._score_item(ev, "event", group_type, child_age,
+                                         context_modifiers, hard_constraints, budget_max, people_count)
+                all_items.append((score, "event", ev))
+
+            # coupons
+            for cp in (getattr(poi, "coupons", None) or []):
+                if not isinstance(cp, dict):
+                    continue
+                score = self._score_item(cp, "coupon", group_type, child_age,
+                                         context_modifiers, hard_constraints, budget_max, people_count)
+                all_items.append((score, "coupon", cp))
+
+        else:
+            # ---- 餐厅 POI：coupons + signature_dishes ----
+            # 套餐优先级始终高于单个推荐菜
+            for cp in (getattr(poi, "coupons", None) or []):
+                if not isinstance(cp, dict):
+                    continue
+                score = self._score_item(cp, "coupon", group_type, child_age,
+                                         context_modifiers, hard_constraints, budget_max, people_count)
+                all_items.append((score + 500, "coupon", cp))
+
+            est_price = int((poi.price_per_person or 80) * 0.3)
+            for dish_name in (getattr(poi, "signature_dishes", None) or []):
+                if not dish_name:
+                    continue
+                dish_dict = {"name": str(dish_name), "price_per_person": est_price}
+                score = self._score_item(dish_dict, "dish", group_type, child_age,
+                                         context_modifiers, hard_constraints, budget_max, people_count)
+                all_items.append((score, "dish", dish_dict))
+
+        if not all_items:
+            return []
+
+        # 降序排列
+        all_items.sort(key=lambda x: -x[0])
+
+        # round-robin 穿插：避免同一类型聚集
+        buckets = {}
+        for score, ct, item in all_items:
+            buckets.setdefault(ct, []).append((score, item))
+        # 各 bucket 内部保持降序
+        for ct in buckets:
+            buckets[ct].sort(key=lambda x: -x[0])
+
+        interleaved = []
+        bucket_keys = sorted(buckets.keys(), key=lambda k: -buckets[k][0][0])  # 按最高分排 bucket 顺序
+        ptr = {k: 0 for k in bucket_keys}
+        while len(interleaved) < 5:
+            added = False
+            for k in bucket_keys:
+                if ptr[k] < len(buckets[k]):
+                    interleaved.append((buckets[k][ptr[k]][0], k, buckets[k][ptr[k]][1]))
+                    ptr[k] += 1
+                    added = True
+            if not added:
+                break
+
+        # 构建输出
+        result = []
+        for score, ct, raw in interleaved:
+            price = raw.get("price_per_person", raw.get("coupon_price", 0) or 0)
+            orig_price = None
+            if ct == "coupon":
+                orig_price = raw.get("original_price")
+
+            name = raw.get("name", raw.get("title", ""))
+            highlight = raw.get("highlight", raw.get("description", ""))
+
+            # 徽章生成
+            badge = self._make_badge(ct, raw, score, group_type, price, orig_price)
+
+            result.append({
+                "content_type": ct,
+                "name": name,
+                "subtitle": raw.get("type", raw.get("cuisine", "")),
+                "price": price,
+                "original_price": orig_price,
+                "highlight": highlight,
+                "badge": badge,
+            })
+        return result
+
+    @staticmethod
+    def _score_item(raw, content_type, group_type, child_age,
+                    context_modifiers, hard_constraints, budget_max, people_count=0):
+        """对单个推荐项打分。包含团购套餐人数适配逻辑。"""
+        score = 0
+        name = str(raw.get("name", raw.get("title", "")))
+        sf_type = str(raw.get("type", raw.get("cuisine", "")))
+        sf_price = raw.get("price_per_person", raw.get("coupon_price", 0) or 0)
+        sf_child = raw.get("child_friendly", False)
+        sf_tags = raw.get("tags", {}) or {}
+        sf_attr = set(sf_tags.get("attribute", []) if isinstance(sf_tags, dict) else [])
+        all_text = name + sf_type + " ".join(sf_attr)
+
+        # ---- 团购套餐人数适配 ----
+        person_match = re.search(r"(\d+)人|双人|单人|(\d)大(\d)小|亲子票", name)
+        coupon_persons = 1  # 默认单人
+        if person_match:
+            matched = person_match.group(0)
+            if "双人" in matched:
+                coupon_persons = 2
+            elif "亲子票" in matched or "大" in matched:
+                coupon_persons = 2  # 1大1小 = 2人
+            elif "单人" in matched:
+                coupon_persons = 1
+            else:
+                try:
+                    coupon_persons = int(person_match.group(1))
+                except (ValueError, IndexError):
+                    coupon_persons = 1
+        # 约会/浪漫关键词默认双人
+        if "约会" in name or "浪漫" in name:
+            coupon_persons = max(coupon_persons, 2)
+
+        # 根据同行人类型调整人数期望
+        if group_type in ("独自一人",):
+            if coupon_persons >= 2:
+                score -= 45  # 独行用户不推荐多人套餐
+        elif group_type in ("情侣约会",):
+            if coupon_persons == 2:
+                score += 18  # 双人套餐正合适
+            elif coupon_persons >= 4:
+                score -= 25  # 情侣不需要大份套餐
+        elif group_type in ("朋友聚会",):
+            if coupon_persons >= 4:
+                score += 22  # 聚会优选大份套餐
+            elif coupon_persons == 1 and content_type == "coupon":
+                score -= 10  # 朋友聚餐单人套餐不够
+            # 朋友出行不推情侣/双人套餐
+            if "情侣" in all_text or "浪漫" in all_text or "约会" in all_text:
+                score -= 40
+            elif coupon_persons == 2 and ("双人" in name or "二人" in name):
+                score -= 30
+        elif group_type in ("家庭出行",):
+            # 估算家庭人数：带老人通常3-6人，带娃2-4人
+            est_family_size = 3
+            if "family_with_elderly" in str(hard_constraints):
+                est_family_size = 4
+            if people_count and isinstance(people_count, (int, float)) and people_count > 0:
+                est_family_size = max(est_family_size, int(people_count))
+            if coupon_persons >= est_family_size:
+                score += 22  # 人数匹配的家庭套餐
+            elif coupon_persons == 2:
+                score -= 25  # 双人套餐不够家庭吃
+            elif coupon_persons == 1:
+                score -= 15
+
+        # ---- 同行人适配 ----
+        if group_type in ("家庭出行",):
+            if sf_child:
+                score += 30
+            if "亲子" in all_text:
+                score += 20
+            if str(child_age) in ("0-3", "0-3岁") and ("乐园" in all_text or "游乐" in all_text):
+                score += 15
+        elif group_type in ("情侣约会",):
+            if content_type in ("sub",) and sf_type in ("私人影院", "手作体验"):
+                score += 20
+            if "浪漫" in all_text or "情侣" in all_text:
+                score += 15
+        elif group_type in ("朋友聚会",):
+            if content_type in ("sub",) and sf_type in ("聚会团建",):
+                score += 20
+            if "聚会" in all_text:
+                score += 15
+            # 朋友出行不推情侣/浪漫标签
+            if "情侣" in all_text or "浪漫" in all_text or "约会" in all_text:
+                score -= 30
+        elif group_type in ("独自一人",):
+            if "安静" in all_text:
+                score += 15
+            if content_type in ("dining",):
+                score -= 5  # 独自一人不太需要附近餐饮推荐
+
+        if sf_price > 0:
+            if sf_price <= budget_max:
+                score += 10
+            elif sf_price > budget_max * 1.5:
+                score -= 30
+
+        if "low_energy" in context_modifiers or "low_walking" in context_modifiers:
+            if "低强度" in all_text or "轻松" in all_text:
+                score += 10
+        if "photo_spot" in context_modifiers:
+            if "出片" in all_text or "打卡" in all_text or "拍照" in all_text:
+                score += 10
+        if "quiet" in context_modifiers:
+            if content_type in ("sub",) and sf_type in ("健身瑜伽", "私人影院", "书店"):
+                score += 10
+
+        if "pet_allowed" in hard_constraints:
+            if "宠物" in all_text:
+                score += 20
+
+        # 内容类型基础分：确保多样性
+        type_bonus = {"sub": 5, "event": 8, "coupon": 3, "dining": 2, "dish": 1}
+        score += type_bonus.get(content_type, 0)
+
+        return score
+
+    @staticmethod
+    def _make_badge(content_type, raw, score, group_type, price, orig_price):
+        """为强推荐项生成 ≤4 字的鲜艳小标签。"""
+        name = str(raw.get("name", raw.get("title", "")))
+        sf_type = str(raw.get("type", raw.get("cuisine", "")))
+        sf_child = raw.get("child_friendly", False)
+
+        # 优惠券：省钱金额
+        if content_type == "coupon" and orig_price and price:
+            saved = orig_price - price
+            if saved >= 100:
+                return f"省{saved}"
+            elif saved >= 20:
+                return f"减{saved}"
+
+        # 停车场
+        if "停车" in name:
+            return "停车券"
+
+        # 限时活动
+        if content_type == "event":
+            date_range = str(raw.get("date_range", ""))
+            if "06" in date_range or "07" in date_range:
+                return "限时"
+            return "活动"
+
+        # 免费
+        if price == 0 and content_type != "dish":
+            return "免费"
+
+        # 亲子
+        if sf_child and group_type in ("家庭出行",):
+            return "亲子"
+
+        # 高评分推荐
+        if score >= 40:
+            return "推荐"
+
+        # 新人/新店
+        if "新" in name[:3]:
+            return "新"
+
+        return None
 
     @staticmethod
     def _restaurant_to_dict(r: Optional[Restaurant]) -> Optional[Dict[str, Any]]:
@@ -1730,7 +2373,7 @@ class WeekendActivityAgent:
                 {
                     "name": a.name,
                     "type": a.type,
-                    "indoor_outdoor": getattr(a, "indoor_outdoor", ""),
+                    "indoor_outdoor": {"indoor": "室内", "outdoor": "户外", "mixed": "室内外结合"}.get(getattr(a, "indoor_outdoor", ""), ""),
                     "child_friendly": a.child_friendly,
                     "need_booking": a.need_booking,
                     "location": {
@@ -1741,11 +2384,18 @@ class WeekendActivityAgent:
                     "duration_minutes": a.suggested_duration_minutes,
                     "tags": a.tags,
                     "price_per_person": a.price_per_person,
+                    "recommendations": self._get_poi_recommendations(a, is_activity=True),
                 }
                 for a in plan.activities
             ],
-            "restaurant": self._restaurant_to_dict(plan.restaurant),
-            "dinner_restaurant": self._restaurant_to_dict(plan.dinner_restaurant),
+            "restaurant": _enrich_restaurant_dict(
+                self._restaurant_to_dict(plan.restaurant),
+                self._get_poi_recommendations(plan.restaurant, is_activity=False) if plan.restaurant else [],
+            ),
+            "dinner_restaurant": _enrich_restaurant_dict(
+                self._restaurant_to_dict(plan.dinner_restaurant),
+                self._get_poi_recommendations(plan.dinner_restaurant, is_activity=False) if plan.dinner_restaurant else [],
+            ),
             "route_infos": [
                 {
                     "from": ri.from_location.name if ri.from_location else "",

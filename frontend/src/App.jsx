@@ -11,7 +11,29 @@ const GUESS_CARDS = [
     highlight: "绣球花开得正盛",
     suffix: "，这周末是花期尾巴了，想拍照的要抓紧。走走停停刚好半天，旁边吃饭也方便。",
     chips: ["户外散心", "拍照打卡", "半天刚好"],
-    prompt: "想在上海安排一个周末半天的户外散心行程，最好能拍照，走走停停不要太累",
+    prompt: "想在上海世纪公园看绣球花，拍拍照，附近吃个饭，轻松半天",
+    locked_location: "世纪公园",
+    location_hint: "世纪公园绣球花，适合拍照散步，附近有餐厅",
+    guessFlow: {
+      context_modifiers: ["outdoor_walk", "photo_spot", "weather_dependent"],
+      implied_constraints: {
+        activity_preference: "outdoor",
+        context_modifiers: ["photo_spot", "weather_dependent", "low_energy", "near_subway"],
+        must_include_location: "世纪公园",
+        guaranteed_activities: [
+          {
+            name: "世纪公园绣球花径",
+            type: "park",
+            location_hint: "世纪公园",
+            description: "绣球花开得正盛，这周末是花期尾巴，适合拍照散步",
+            tags: ["公园", "绣球花", "拍照打卡", "户外散心"],
+            duration_minutes: 120,
+            poi_category: "户外.公园",
+          },
+        ],
+        // 世纪公园卡片未 showcase 具体餐馆，"旁边吃饭也方便"由正常搜索覆盖，不加 guaranteed_restaurants
+      },
+    },
   },
   {
     primaryIntent: "meal",
@@ -20,7 +42,28 @@ const GUESS_CARDS = [
     highlight: "黑珍珠粤菜馆",
     suffix: "，上个月刚上榜，趁现在还没太火可以先去。人均200左右，周末值得。",
     chips: ["吃顿好的", "新上榜", "适合约饭"],
-    prompt: "想在上海周末吃顿好的，人均200左右，可以安排一顿适合约饭的餐厅",
+    prompt: "想在武康路附近找一家不错的餐厅，人均200左右，适合周末慢慢吃",
+    locked_location: "武康路",
+    location_hint: "武康路，黑珍珠粤菜馆，人均200，附近可逛",
+    guessFlow: {
+      context_modifiers: ["meal", "high_budget", "place_quality"],
+      implied_constraints: {
+        primary_intent_override: "meal",
+        budget_level: "high",
+        context_modifiers: ["high_budget", "place_quality", "quiet"],
+        must_include_location: "武康路",
+        guaranteed_restaurants: [
+          {
+            name: "黑珍珠粤菜馆",
+            cuisine_type: "粤菜",
+            location_hint: "武康路",
+            description: "新开的黑珍珠上榜粤菜馆，人均200左右，环境讲究适合慢慢吃",
+            tags: ["黑珍珠", "粤菜", "高级", "安静", "新开"],
+            budget_level: "high",
+          },
+        ],
+      },
+    },
   },
   {
     primaryIntent: "culture_experience",
@@ -29,7 +72,38 @@ const GUESS_CARDS = [
     highlight: "「路易斯·韦恩」猫猫插画展",
     suffix: "，展不大但很出片，逛完旁边就是番禺路咖啡街，适合放松。",
     chips: ["看展", "低体力", "咖啡顺路"],
-    prompt: "想在上海安排一个轻松看展行程，低体力、适合拍照，最好附近还能喝咖啡",
+    prompt: "想去上生·新所看猫猫插画展，逛完在番禺路喝杯咖啡，轻松一下午",
+    locked_location: "上生·新所",
+    location_hint: "上生·新所猫猫插画展，旁边番禺路咖啡街，低体力适合拍照",
+    guessFlow: {
+      context_modifiers: ["culture_experience", "photo_spot", "low_energy", "cafe_tea"],
+      implied_constraints: {
+        activity_preference: "indoor",
+        context_modifiers: ["photo_spot", "low_energy", "quiet", "cafe_tea", "no_reservation"],
+        must_include_location: "上生·新所",
+        guaranteed_activities: [
+          {
+            name: "路易斯·韦恩猫猫插画展",
+            type: "exhibition",
+            location_hint: "上生·新所",
+            description: "展不大但很出片，适合轻松逛展拍照",
+            tags: ["展览", "插画", "猫", "拍照打卡", "文艺"],
+            duration_minutes: 90,
+            poi_category: "文化.展览",
+          },
+        ],
+        guaranteed_restaurants: [
+          {
+            name: "番禺路咖啡馆",
+            cuisine_type: "咖啡",
+            location_hint: "番禺路",
+            description: "番禺路咖啡街，逛完展喝杯咖啡放松",
+            tags: ["咖啡", "文艺", "安静", "番禺路"],
+            budget_level: "medium",
+          },
+        ],
+      },
+    },
   },
 ];
 
@@ -74,6 +148,7 @@ const LABELS = {
 };
 
 function label(value) {
+  if (!value || value === "unknown") return "待确认";
   return LABELS[value] || value;
 }
 
@@ -96,6 +171,15 @@ const TRANSPORT_INFO = {
 const STOP_TYPE_META = {
   activity: { icon: "📍", badge: "活动", badgeClass: "badge-activity" },
   meal: { icon: "🍽️", badge: "餐饮", badgeClass: "badge-meal" },
+};
+
+// 推荐信息内容类型 → 中文标签
+const CONTENT_TYPE_LABEL = {
+  sub: "🎮 子设施",
+  event: "🎪 限时活动",
+  coupon: "🎫 优惠",
+  dining: "🍜 附近美食",
+  dish: "🥘 推荐菜",
 };
 
 /**
@@ -146,6 +230,7 @@ function buildRouteStops(plan, request) {
           locationDetail: matched.location,
           durationMinutes: matched.duration_minutes,
           pricePerPerson: matched.price_per_person,
+          recommendations: matched.recommendations || [],
         };
       }
     } else if (isMeal) {
@@ -167,6 +252,7 @@ function buildRouteStops(plan, request) {
           locationDetail: matchedRestaurant.location,
           pricePerPerson: matchedRestaurant.price_per_person,
           tags: [],
+          recommendations: matchedRestaurant.recommendations || [],
         };
       }
     }
@@ -426,7 +512,7 @@ function EmptyState({ onPick }) {
             className="guess-card"
             key={card.primaryIntent}
             type="button"
-            onClick={() => onPick(card.prompt)}
+            onClick={() => onPick(card)}
           >
             <span className="guess-title">{card.title}</span>
             <span className="guess-copy">
@@ -446,7 +532,7 @@ function EmptyState({ onPick }) {
   );
 }
 
-function StructuredPanel({ slots, onSlotSelect, onSubmit, disabled }) {
+function StructuredPanel({ slots, onSlotSelect, onSubmit, disabled, toastVisible, toastKey }) {
   const companionSelected = (slots.companion_context || []).length > 0;
   const timeSelected = !!slots.time_window;
   const transportSelected = !!slots.transportation;
@@ -472,6 +558,9 @@ function StructuredPanel({ slots, onSlotSelect, onSubmit, disabled }) {
             </button>
           ))}
         </div>
+        {toastVisible && (
+          <div className="slot-toast" key={toastKey}>请先选择出行人</div>
+        )}
       </div>
 
       <div className="slot-question">
@@ -625,10 +714,35 @@ function UserBubble({ content }) {
   );
 }
 
-function LoadingCard() {
+const TIME_WINDOW_DURATION = {
+  morning: "约3-4小时",
+  afternoon: "约4-5小时",
+  evening: "约2-3小时",
+  full_day: "约6-8小时",
+  night: "约2-3小时",
+  now: "约2-3小时",
+};
+
+function LoadingCard({ slots, accumulatedSlots, guessCardCtx }) {
+  const compContext = (slots?.companion_context || []).filter(c => c && c !== "unknown");
+  const companion = compContext.length > 0
+    ? compContext.map(c => LABELS[c] || c).join("、")
+    : "分析中…";
+
+  const primaryIntent = accumulatedSlots?.primary_intent || guessCardCtx?.primaryIntent;
+  const intent = primaryIntent ? (LABELS[primaryIntent] || primaryIntent) : "分析中…";
+
+  const duration = TIME_WINDOW_DURATION[slots?.time_window] || "约3-4小时";
+
   return (
     <div className="plan-card loading-card">
-      <div className="card-label">推荐方案</div>
+      <div className="card-label">正在根据你的偏好规划方案</div>
+      <div className="meta-grid">
+        <MetaBox label="同行场景" value={companion} />
+        <MetaBox label="主要意图" value={intent} />
+        <MetaBox label="预计时长" value={duration} />
+        <MetaBox label="匹配分" value="计算中…" />
+      </div>
       <div className="loading-lines">
         <span />
         <span />
@@ -706,36 +820,131 @@ function TemplateCards({ cards, onSelect, loading, selectedId }) {
 function PlanCard({ result, onShare, shareLoading }) {
   const plan = result?.best_plan || {};
   const request = result?.request || {};
-  const companion = (request.companion_context || []).map(label).join("、") || label(request.companions);
-  const intent = label(request.primary_intent || request.scenario_type || "mixed_plan");
-  const chips = useMemo(
-    () =>
-      [
-        ...(request.context_modifiers || []),
-        ...(request.hard_constraints || []),
-        ...(request.soft_preferences || []),
-      ]
-        .filter(Boolean)
-        .slice(0, 8),
-    [request.context_modifiers, request.hard_constraints, request.soft_preferences],
-  );
-  const reason = plan.recommendation_reason || "按你的时间、预算、距离和偏好综合排序。";
+  const [selectedRecs, setSelectedRecs] = useState({});
+  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [orderSummary, setOrderSummary] = useState(null); // {count, total}
+  const [showConfetti, setShowConfetti] = useState(false);
 
+  // 计算选中项总价
+  const selectedEntries = Object.entries(selectedRecs);
+  const selectedCount = selectedEntries.length;
+  const totalSelectedPrice = selectedEntries.reduce((sum, [, rec]) => sum + (rec.price || 0), 0);
+
+  // 浮动价签：底部合计栏不可见时出现，约束在 phone-frame 内
+  const totalBarRef = useRef(null);
+  const pillRef = useRef(null);
+  const [pillVisible, setPillVisible] = useState(false);
+  // lazy 初始化：直接算好右下角位置
+  const [pillPos, setPillPos] = useState(() => {
+    const frame = document.querySelector(".phone-frame");
+    if (frame) {
+      const r = frame.getBoundingClientRect();
+      return { x: r.right - 124, y: r.top + 220 };
+    }
+    return { x: window.innerWidth - 124, y: 240 };
+  });
+  const [pillSide, setPillSide] = useState("right");
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPillX: 0, startPillY: 0 });
+
+  // 价签出现时重新校准位置
+  useEffect(() => {
+    if (!pillVisible) return;
+    const frame = document.querySelector(".phone-frame");
+    if (frame) {
+      const r = frame.getBoundingClientRect();
+      setPillPos(prev => ({
+        x: pillSide === "left" ? r.left + 4 : r.right - 124,
+        y: Math.max(r.top + 50, Math.min(prev.y, r.bottom - 80)),
+      }));
+    }
+  }, [pillVisible, pillSide]);
+
+  function getPhoneBounds() {
+    const frame = document.querySelector(".phone-frame");
+    if (!frame) return { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
+    return frame.getBoundingClientRect();
+  }
+
+  useEffect(() => {
+    if (selectedCount === 0) { setPillVisible(false); return; }
+    // 只要选中了项目就立即显示浮动价签
+    setPillVisible(true);
+
+    const el = totalBarRef.current;
+    const root = document.querySelector(".chat-scroll");
+    if (!el || !root) return; // ref 未就绪或找不到滚动容器则保持显示
+
+    function check() {
+      const rootRect = root.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      // 合计栏完全在滚动容器可视区内 → 隐藏浮动价签；否则显示
+      const visible = elRect.bottom <= rootRect.bottom - 70 && elRect.top >= rootRect.top;
+      setPillVisible(!visible);
+    }
+
+    root.addEventListener("scroll", check, { passive: true });
+    check(); // 初始检查：如果合计栏当前可见则立即隐藏
+    return () => root.removeEventListener("scroll", check);
+  }, [selectedCount, totalSelectedPrice]);
+
+  function handlePillPointerDown(e) {
+    e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    dragRef.current = {
+      dragging: true,
+      startX: pt.clientX, startY: pt.clientY,
+      startPillX: pillPos.x, startPillY: pillPos.y,
+    };
+  }
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!dragRef.current.dragging) return;
+      const pt = e.touches ? e.touches[0] : e;
+      const bounds = getPhoneBounds();
+      const dx = pt.clientX - dragRef.current.startX;
+      const dy = pt.clientY - dragRef.current.startY;
+      const pillW = 120;
+      setPillPos({
+        x: Math.max(bounds.left + 4, Math.min(bounds.right - pillW - 4, dragRef.current.startPillX + dx)),
+        y: Math.max(bounds.top + 50, Math.min(bounds.bottom - 70, dragRef.current.startPillY + dy)),
+      });
+    }
+    function onUp() {
+      if (!dragRef.current.dragging) return;
+      dragRef.current.dragging = false;
+      const bounds = getPhoneBounds();
+      const pillW = 120;
+      // 吸附到手机框最近边
+      setPillPos(prev => {
+        const mid = (bounds.left + bounds.right) / 2;
+        const side = prev.x < mid ? "left" : "right";
+        setPillSide(side);
+        return { x: side === "left" ? bounds.left + 4 : bounds.right - pillW - 4, y: prev.y };
+      });
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, []);
+  const creativeTitle = result?.creative_title || "";
+  const originalTitle = plan.title || "";
   const stops = useMemo(() => buildRouteStops(plan, request), [plan, request]);
   const transportInfo = TRANSPORT_INFO[request.transportation] || TRANSPORT_INFO.driving;
 
   return (
     <article className="plan-card">
-      <div className="card-label">推荐方案</div>
-      <p className="card-intro">我按你的需求整理了一个可执行方案，可以直接按下面的路线走。</p>
-      <h2>{plan.title || "本地生活行程方案"}</h2>
-
-      <div className="meta-grid">
-        <MetaBox label="同行场景" value={companion} />
-        <MetaBox label="主要意图" value={intent} />
-        <MetaBox label="预计时长" value={getDurationText(plan.total_duration_minutes)} />
-        <MetaBox label="匹配分" value={typeof plan.score === "number" ? plan.score.toFixed(1) : "待计算"} />
-      </div>
+      <h2 className="creative-title">{creativeTitle || originalTitle || "本地生活行程方案"}</h2>
+      {creativeTitle && originalTitle && (
+        <p className="original-title-sub">{originalTitle}</p>
+      )}
 
       {stops.length > 0 && (
         <>
@@ -823,6 +1032,49 @@ function PlanCard({ result, onShare, shareLoading }) {
                           <span>人均 ¥{stop.pricePerPerson}</span>
                         </div>
                       )}
+
+                      {/* 推荐信息横排（子设施/活动/优惠券/附近餐饮/推荐菜） */}
+                      {stop.recommendations && stop.recommendations.length > 0 && (
+                        <div className="rec-row">
+                          {stop.recommendations.map((rec, recIdx) => {
+                            const recKey = `${idx}-${recIdx}`;
+                            const isSelected = !!selectedRecs[recKey];
+                            return (
+                              <div
+                                key={recIdx}
+                                className={`rec-item ${isSelected ? "rec-item-selected" : ""}`}
+                                onClick={() => {
+                                  setSelectedRecs(prev => {
+                                    const next = { ...prev };
+                                    if (next[recKey]) {
+                                      delete next[recKey];
+                                    } else {
+                                      next[recKey] = rec;
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {rec.badge && (
+                                  <span className={`rec-badge rec-badge-${rec.content_type}`}>
+                                    {rec.badge}
+                                  </span>
+                                )}
+                                <div className="rec-header">
+                                  <span className="rec-type">{CONTENT_TYPE_LABEL[rec.content_type] || "✨ 推荐"}</span>
+                                  {rec.price > 0 && (
+                                    <span className="rec-price">¥{rec.price}</span>
+                                  )}
+                                </div>
+                                <span className="rec-name">{rec.name}</span>
+                                {rec.highlight && (
+                                  <span className="rec-highlight">{rec.highlight}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -832,15 +1084,97 @@ function PlanCard({ result, onShare, shareLoading }) {
         </>
       )}
 
-      {chips.length > 0 && (
-        <div className="chips">
-          {chips.map((chip) => (
-            <span key={chip}>{label(chip)}</span>
-          ))}
+      {/* 选中推荐项合计栏 */}
+      {totalSelectedPrice > 0 && (
+        <div className="rec-total-bar" ref={totalBarRef}>
+          <span className="rec-total-label">已选 {selectedCount} 项</span>
+          <span className="rec-total-price">合计 ¥{totalSelectedPrice}</span>
+          <button
+            className="rec-order-btn"
+            type="button"
+            onClick={() => {
+              const summary = { count: selectedCount, total: totalSelectedPrice };
+              setOrderSummary(summary);
+              setOrderPlaced(true);
+              setSelectedRecs({});
+              setShowConfetti(true);
+              setTimeout(() => setShowConfetti(false), 2800);
+            }}
+          >
+            一键下单
+          </button>
         </div>
       )}
 
-      <p className="reason">{reason}</p>
+      {/* 下单成功状态栏 */}
+      {orderPlaced && orderSummary && (
+        <div className="order-success-bar">
+          <span className="order-success-emoji">🎉</span>
+          <div className="order-success-text">
+            <strong>下单成功</strong>
+            <span>{orderSummary.count} 项服务已预约 · 合计 ¥{orderSummary.total}</span>
+          </div>
+          <button
+            className="order-success-dismiss"
+            type="button"
+            onClick={() => setOrderPlaced(false)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* 浮动窄价签：底部合计栏不可见时悬浮在屏幕上 */}
+      {pillVisible && (
+        <div
+          className="rec-float-pill-container"
+          style={{ left: pillPos.x, top: pillPos.y }}
+          onMouseDown={handlePillPointerDown}
+          onTouchStart={handlePillPointerDown}
+        >
+          <div className="rec-float-roo-wrap">
+            <img src="/kangaroo.png" alt="" className="rec-float-roo" />
+          </div>
+          <div className="rec-float-pill-body">
+            <span className="rec-float-count">{selectedCount}项</span>
+            <span className="rec-float-price">¥{totalSelectedPrice}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 礼花动效：固定定位覆盖手机框可视区域，跟随滚动位置 */}
+      {showConfetti && (() => {
+        const frame = document.querySelector(".phone-frame");
+        const fRect = frame ? frame.getBoundingClientRect() : null;
+        const overlayStyle = fRect ? {
+          position: "fixed",
+          left: fRect.left,
+          top: fRect.top + 46 + 82,  // status bar + header
+          width: fRect.width,
+          height: fRect.height - 46 - 82 - 94, // minus status, header, composer
+          zIndex: 150,
+          pointerEvents: "none",
+          overflow: "hidden",
+          borderRadius: "0 0 32px 32px",
+        } : {};
+        return (
+          <div style={overlayStyle}>
+            {Array.from({ length: 50 }).map((_, i) => (
+              <span
+                key={i}
+                className={`confetti-piece confetti-${i % 6}`}
+                style={{
+                  position: "absolute",
+                  top: "-10px",
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.8}s`,
+                  animationDuration: `${1.6 + Math.random() * 1.4}s`,
+                }}
+              />
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="plan-actions">
         <button
@@ -1029,8 +1363,22 @@ export default function App() {
   const [animatingSentence, setAnimatingSentence] = useState(null); // {text, startX, startY}
   const [receiptLoadingIdx, setReceiptLoadingIdx] = useState(null); // which message index is loading receipt
   const [templateCards, setTemplateCards] = useState([]); // Round 1: 泛方案卡片
+  const [petToastCount, setPetToastCount] = useState(0);
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimerRef = useRef(null);
+
+  // 宠物标签 toast：每次 petToastCount 变化时显示，2.5s 后自动消失
+  useEffect(() => {
+    if (petToastCount > 0) {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setToastVisible(true);
+      toastTimerRef.current = setTimeout(() => setToastVisible(false), 2500);
+    }
+  }, [petToastCount]);
+
   const [templateCardsLoading, setTemplateCardsLoading] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState(null); // user selected card id
+  const [guessCardCtx, setGuessCardCtx] = useState(null); // GUESS_CARD picked for direct flow (skips input box & template cards)
 
   // 同步 messages 长度到 ref，供 goToStep 快照使用
   useEffect(() => {
@@ -1098,11 +1446,23 @@ export default function App() {
     setAnimatingSentence(null);
     setTemplateCards([]);
     setSelectedCardId(null);
+    setGuessCardCtx(null);
   }
 
   // ---- Slot selection handlers ----
 
   function handleSlotSelect(category, value) {
+    // 带宠物不可单独选择，需先选出行人
+    if (category === "companion_context" && value === "pet") {
+      const current = slots.companion_context || [];
+      const hasSelection = current.some(v => v !== "pet");
+      const isSelecting = !current.includes("pet");
+      if (isSelecting && !hasSelection) {
+        setPetToastCount(c => c + 1);
+        return;
+      }
+    }
+
     setSlots((prev) => {
       if (category === "companion_context") {
         const current = prev.companion_context || [];
@@ -1113,6 +1473,9 @@ export default function App() {
             // "独自出行" 和 "情侣出行" 与除"带宠物"外的所有标签互斥
             next = [...current.filter((v) => v === "pet"), value];
           } else if (value === "pet") {
+            // 带宠物不能单独选，必须依附于已有同行人类型
+            const nonPet = current.filter(v => v !== "pet");
+            if (nonPet.length === 0) return prev;
             next = [...current, value];
           } else {
             // 选择其他标签时取消"独自出行"和"情侣出行"
@@ -1121,7 +1484,10 @@ export default function App() {
           if (next.length > 3) return prev;
           return { ...prev, companion_context: next };
         } else {
-          return { ...prev, companion_context: current.filter((v) => v !== value) };
+          let filtered = current.filter((v) => v !== value);
+          // 取消选择后如果只剩下"带宠物"，连带取消
+          if (filtered.length === 1 && filtered[0] === "pet") filtered = [];
+          return { ...prev, companion_context: filtered };
         }
       }
       if (category === "time_window") {
@@ -1147,15 +1513,24 @@ export default function App() {
     setError("");
 
     try {
+      const body = {
+        companion_context: slots.companion_context,
+        time_window: slots.time_window,
+        transportation: slots.transportation,
+        context_modifiers: [...(slots.context_modifiers || []), ...(guessCardCtx?.guessFlow?.context_modifiers || [])],
+      };
+
+      // GUESS_CARD 路径：传递地点上下文，让小猜问围绕卡片地点展开
+      if (guessCardCtx) {
+        body.location_hint = guessCardCtx.location_hint || "";
+        body.locked_location = guessCardCtx.locked_location || "";
+        body.primary_intent = guessCardCtx.primaryIntent || "";
+      }
+
       const response = await fetch("/api/suggest-followup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companion_context: slots.companion_context,
-          time_window: slots.time_window,
-          transportation: slots.transportation,
-          context_modifiers: slots.context_modifiers,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -1339,6 +1714,73 @@ export default function App() {
     }
   }
 
+  // GUESS_CARD 快捷路径：跳过泛方案卡片，用卡片约束 + 小猜问补充槽位直接生成方案
+  async function submitGuessCardPlan(message) {
+    const card = guessCardCtx;
+    if (!card) return;
+    const gf = card.guessFlow || {};
+
+    const groupType = (slots.companion_context || [])[0] || "";
+    const currentSlots = {
+      group_type: groupType === "family_with_children" ? "家庭出行" :
+                   groupType === "family_with_elderly" ? "家庭出行" :
+                   groupType === "friends" ? "朋友聚会" :
+                   groupType === "colleagues" ? "朋友聚会" :
+                   groupType === "couple" ? "情侣约会" :
+                   groupType === "solo" ? "独自一人" : "",
+      time_slot: slots.time_window || "",
+      mobility: {
+        driving: "自驾", transit: "公共交通", taxi: "打车", bike_walk: "骑行/步行",
+      }[slots.transportation] || "",
+      primary_intent: card.primaryIntent,
+      context_modifiers: [
+        ...(gf.implied_constraints?.context_modifiers || []),
+        ...(slots.context_modifiers || []),
+        ...(gf.context_modifiers || []),
+      ],
+      ...gf.implied_constraints,
+      ...accumulatedSlots,
+    };
+
+    // 合并卡片约束和小猜问补充槽位
+    const lockedConstraints = { ...currentSlots };
+
+    // 锁定地点：确保最终方案包含 GUESS_CARD 提到的具体地点
+    if (card.locked_location) {
+      lockedConstraints.must_include_location = card.locked_location;
+    }
+
+    // 构建消息：前缀锁定地点，后缀为用户小猜问补充内容
+    const baseMsg = card.locked_location
+      ? `去${card.locked_location}，${card.prompt}`
+      : (card.prompt || "");
+    const fullMessage = message ? `${baseMsg}。${message}` : baseMsg;
+
+    try {
+      const chatRes = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: fullMessage,
+          locked_constraints: lockedConstraints,
+        }),
+      });
+
+      if (!chatRes.ok) {
+        const detail = await chatRes.text();
+        throw new Error(detail || "方案生成失败");
+      }
+
+      const result = await chatRes.json();
+      setMessages((prev) => [...prev, { role: "agent", result }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "方案生成失败");
+    } finally {
+      setLoading(false);
+      setGuessCardCtx(null);
+    }
+  }
+
   async function handleFollowupSend(text) {
     const message = text.trim();
     if (!message || loading) return;
@@ -1348,8 +1790,15 @@ export default function App() {
     setGuessSentences([]);
     setMessages((prev) => [...prev, { role: "user", content: message }]);
 
-    // 用户发送小猜问编辑后的文本 → 拉取泛方案卡片（Round 1）
-    fetchTemplateCards(message);
+    if (guessCardCtx) {
+      // GUESS_CARD 快捷路径：跳过泛方案卡片，直接生成个性化最终方案
+      setLoading(true);
+      goToStep("result");
+      await submitGuessCardPlan(message);
+    } else {
+      // 普通路径：拉取泛方案卡片（Round 1）
+      fetchTemplateCards(message);
+    }
   }
 
   // ---- Free-text send (fallback / existing path) ----
@@ -1444,9 +1893,21 @@ export default function App() {
     }
   }
 
-  function handleGuessCardPick(prompt) {
-    setDraft(prompt);
+  function handleGuessCardPick(card) {
+    // GUESS_CARD 入口：预填卡片已知槽位 → 进入结构化槽位收集 → 再进入地点感知小猜问
+    const gf = card.guessFlow || {};
+
+    // 预填 context_modifiers
+    setSlots((prev) => {
+      const merged = [...new Set([...(prev.context_modifiers || []), ...(gf.context_modifiers || [])])];
+      return { ...prev, context_modifiers: merged };
+    });
+
+    // 存储卡片上下文，供后续小猜问和方案生成使用
+    setGuessCardCtx(card);
+    // 进入结构化槽位收集（与普通流程一致）
     goToStep("collecting");
+    setError("");
   }
 
   // ---- Render ----
@@ -1471,10 +1932,12 @@ export default function App() {
               onSlotSelect={handleSlotSelect}
               onSubmit={handleSlotsSubmit}
               disabled={loading}
+              toastVisible={toastVisible}
+              toastKey={petToastCount}
             />
           )}
 
-          {(step === "followup" || step === "templates" || step === "result") && (
+          {!guessCardCtx && (step === "followup" || step === "templates" || step === "result") && (
             <Q1Summary slots={slots} />
           )}
 
@@ -1521,7 +1984,9 @@ export default function App() {
             />
           )}
 
-          {loading && (step === "result" || step === "followup") && <LoadingCard />}
+          {loading && (step === "result" || step === "followup") && (
+            <LoadingCard slots={slots} accumulatedSlots={accumulatedSlots} guessCardCtx={guessCardCtx} />
+          )}
         </div>
         <FlyingSentence animatingSentence={animatingSentence} />
         <Composer

@@ -19,7 +19,23 @@
       "Bash(curl -s -X POST http://localhost:8000/api/chat -H 'Content-Type: application/json' -d '{\"message\":\"\",\"structured_data\":{\"companion_context\":[\"friends\"],\"time_window\":\"evening\",\"transportation\":\"transit\",\"context_modifiers\":[\"near_subway\"],\"slot_answers\":{\"我们一共几个人？\":\"3-5\",\"想吃啥菜系？\":\"hotpot\",\"人均预算多少？\":\"medium\"}}}')",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('success:', d['success']\\); print\\('title:', d['best_plan']['title']\\); print\\('request companion_context:', d['request'].get\\('companion_context'\\)\\); print\\('request context_modifiers:', d['request'].get\\('context_modifiers'\\)\\)\")",
       "Bash(curl -s http://localhost:5173/src/styles.css)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git config *)",
+      "Bash(brew list *)",
+      "Read(//Applications/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(brew install *)",
+      "Bash(sw_vers -productVersion)",
+      "Bash(unzip -o /tmp/ngrok.zip -d /usr/local/bin/)",
+      "Bash(chmod +x /usr/local/bin/ngrok)",
+      "Bash(ngrok version *)",
+      "Bash(mkdir -p ~/.local/bin)",
+      "Bash(unzip -o /tmp/ngrok.zip -d ~/.local/bin/)",
+      "Bash(chmod +x ~/.local/bin/ngrok)",
+      "Bash(~/.local/bin/ngrok version *)",
+      "Bash(~/.local/bin/ngrok config *)",
+      "Edit(~/.claude/skills/classifier-sync/**)",
+      "Edit(~/.claude/skills/quality-gate/**)"
     ]
   }
 }

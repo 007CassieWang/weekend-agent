@@ -317,6 +317,8 @@ button {
   border-radius: 22px;
   padding: 18px;
   box-shadow: 0 6px 22px rgba(27, 39, 43, 0.06);
+  position: relative;
+  overflow: hidden;
 }
 
 .card-label {
@@ -326,23 +328,30 @@ button {
   margin-bottom: 10px;
 }
 
-.card-intro {
-  margin: 0 0 14px;
-  color: #424242;
-  background: var(--soft);
-  border-radius: 16px;
-  padding: 12px;
-  font-size: 14px;
-  line-height: 1.48;
-}
-
 .plan-card h2 {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   color: var(--ink);
-  font-size: 20px;
-  line-height: 1.25;
+  font-size: 17px;
+  line-height: 1.35;
   font-weight: 780;
   letter-spacing: 0;
+}
+
+.creative-title {
+  /* 创意主标题：有呼吸感 */
+}
+
+.original-title-sub {
+  margin: 0 0 16px;
+  color: #9b9b95;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 520;
+  opacity: 0.7;
+}
+
+.original-title-sub::before {
+  content: "📍 ";
 }
 
 .plan-card h3 {
@@ -570,6 +579,356 @@ button {
   color: #c62828;
 }
 
+/* ---- Recommendation Row (POI 推荐信息横排：子设施/活动/优惠/餐饮/推荐菜) ---- */
+
+.rec-row {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 10px 2px 2px;
+  border-top: 1px dashed #e8e2cc;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.rec-row::-webkit-scrollbar {
+  display: none;
+}
+
+.rec-item {
+  flex: 0 0 auto;
+  width: calc((100vw - 64px) / 2.55);
+  min-width: 100px;
+  max-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 9px;
+  background: #fafaf3;
+  border: 1.5px solid #e8e3ce;
+  border-radius: 12px;
+  transition: all 0.18s ease;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  scroll-snap-align: start;
+}
+
+.rec-item:active {
+  transform: scale(0.96);
+}
+
+.rec-item-selected {
+  background: #fff7e0;
+  border-color: #f9a825;
+  box-shadow: 0 2px 10px rgba(249, 168, 37, 0.2);
+}
+
+.rec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.rec-type {
+  font-size: 10px;
+  font-weight: 650;
+  color: #8d6e3f;
+  background: #f5f0e2;
+  padding: 2px 6px;
+  border-radius: 999px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.rec-price {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e65100;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rec-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #424242;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rec-highlight {
+  font-size: 10px;
+  color: #8d8d8d;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- 推荐徽章（右上角鲜艳小标签，≤4字） ---- */
+
+.rec-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  line-height: 1.4;
+  color: #fff;
+  white-space: nowrap;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.rec-badge-sub     { background: #ff8f00; }   /* 子设施 → 橙色 */
+.rec-badge-event   { background: #7c4dff; }   /* 限时活动 → 紫色 */
+.rec-badge-coupon  { background: #e53935; }   /* 优惠券 → 红色 */
+.rec-badge-dining  { background: #00bfa5; }   /* 附近美食 → 青绿色 */
+.rec-badge-dish    { background: #1e88e5; }   /* 推荐菜 → 蓝色 */
+
+/* ---- 合计栏 & 一键下单（方案底部最终价格） ---- */
+
+.rec-total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #fffef7;
+  border: 1.5px solid #f9d74a;
+  border-radius: 16px;
+  animation: rec-bar-in 0.3s ease;
+}
+
+.rec-total-bar-ref {
+  /* IntersectionObserver 观察目标，无视觉样式 */
+}
+
+/* ---- 浮动窄价签容器：袋鼠 + pill 身体为兄弟节点，身体藏 pill 后面 ---- */
+
+.rec-float-pill-container {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  animation: pill-pop-in 0.25s ease;
+  white-space: nowrap;
+}
+
+.rec-float-pill-container:active {
+  cursor: grabbing;
+}
+
+/* 袋鼠图：绝对定位，初始藏在 pill 后面，浮现到上半身露出 */
+.rec-float-roo-wrap {
+  position: absolute;
+  left: -4px;
+  bottom: 0px;
+  width: 54px;
+  height: 66px;
+  z-index: 0;          /* 在 pill-body 后面 */
+  pointer-events: none;
+  animation: roo-emerge 0.5s 0.12s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes roo-emerge {
+  from { bottom: -42px; opacity: 0.3; }
+  to   { bottom: 0px;  opacity: 1; }
+}
+
+.rec-float-roo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+}
+
+/* pill 身体：内容自适应宽度，白色背景遮挡袋鼠下半身 */
+.rec-float-pill-body {
+  position: relative;
+  z-index: 1;          /* 在袋鼠上面，遮挡其下半身 */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #fffef7;
+  border: 1.5px solid #f9d74a;
+  border-radius: 999px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(249,168,37,0.2);
+}
+
+@keyframes pill-pop-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pill-body-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.rec-float-count {
+  font-size: 11px;
+  color: #6d6d6d;
+}
+
+.rec-float-price {
+  font-size: 15px;
+  font-weight: 780;
+  color: #e65100;
+}
+
+/* ---- 下单成功状态栏（分享按钮上方） ---- */
+
+.order-success-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  border: 1.5px solid #a5d6a7;
+  border-radius: 16px;
+  animation: order-bar-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes order-bar-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.order-success-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  animation: emoji-bounce 0.6s ease-out;
+}
+
+@keyframes emoji-bounce {
+  0%   { transform: scale(0); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.order-success-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.order-success-text strong {
+  font-size: 14px;
+  font-weight: 750;
+  color: #2e7d32;
+}
+
+.order-success-text span {
+  font-size: 12px;
+  color: #558b2f;
+  line-height: 1.3;
+}
+
+.order-success-dismiss {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+  color: #888;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.order-success-dismiss:hover {
+  background: rgba(0,0,0,0.12);
+  color: #555;
+}
+
+/* ---- 礼花动效（fixed 定位覆盖手机框可视区域） ---- */
+
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
+}
+
+.confetti-0 { background: #f9a825; }
+.confetti-1 { background: #e53935; }
+.confetti-2 { background: #43a047; }
+.confetti-3 { background: #1e88e5; }
+.confetti-4 { background: #7c4dff; }
+.confetti-5 { background: #ff8f00; }
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(360px) rotate(720deg) scale(0.3); opacity: 0; }
+}
+
+@keyframes rec-bar-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rec-total-label {
+  font-size: 13px;
+  color: #6d6d6d;
+  flex-shrink: 0;
+}
+
+.rec-total-price {
+  font-size: 17px;
+  font-weight: 780;
+  color: #e65100;
+  flex: 1;
+  text-align: center;
+}
+
+.rec-order-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff8f00, #f9a825);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(249, 168, 37, 0.35);
+}
+
+.rec-order-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(249, 168, 37, 0.25);
+}
+
 /* Keep old timeline styles for backward compatibility (receipt etc. may use them) */
 .timeline {
   border-top: 1px solid var(--line);
@@ -603,34 +962,6 @@ button {
   color: #777;
   font-size: 12px;
   line-height: 1.3;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 14px;
-}
-
-.chips span {
-  border-radius: 999px;
-  background: #f7f8f6;
-  border: 1px solid #e9e9e4;
-  color: #4d4d49;
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.reason {
-  margin: 14px 0 0;
-  color: #6f4c00;
-  background: #fff7df;
-  border: 1px solid #f2e4b8;
-  border-radius: 15px;
-  padding: 12px;
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .mock-note {
@@ -798,6 +1129,23 @@ button {
   color: #5d4037;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(249, 168, 37, 0.25);
+}
+
+.slot-toast {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #fff3e0;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  animation: toastIn 0.25s ease-out;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .slot-submit {
