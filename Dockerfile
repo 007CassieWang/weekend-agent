@@ -3,8 +3,8 @@ FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# 安装依赖（利用 Docker 缓存层）
-COPY frontend/package.json frontend/package-lock.json ./
+# 安装依赖（不复制 package-lock.json，避免 npm ci 的可选依赖 bug）
+COPY frontend/package.json ./
 RUN npm install
 
 # 复制前端源码并构建
