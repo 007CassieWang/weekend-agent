@@ -375,7 +375,18 @@ def score_plans(
 
 def get_score_explanation(breakdown: ScoreBreakdown) -> Dict[str, str]:
     """获取各项得分的简要解释。"""
+    _DIM_LABELS = {
+        "time_fit": "时间匹配度",
+        "distance_fit": "距离合理度",
+        "route_score": "路线顺畅度",
+        "availability_risk": "可预约性",
+        "match_score": "偏好匹配度",
+        "variety_score": "体验丰富度",
+        "cost_efficiency": "性价比",
+        "weather_fit": "天气适配度",
+    }
     explanations = {}
     for key, value in breakdown.to_dict().items():
-        explanations[key] = f"{key} 得分 {value:.1f}"
+        label = _DIM_LABELS.get(key, key)
+        explanations[key] = f"{label} 得分 {value:.1f}"
     return explanations

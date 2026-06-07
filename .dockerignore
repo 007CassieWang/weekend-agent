@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+frontend/node_modules/
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# IDE / Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Sensitive config
+.env
+.claude/settings.local.json
+
+# Project docs & reference (not needed at runtime)
+参考/
+docs/
+.claude/
+CLAUDE.md
+README.md
+
+# Test & eval scripts (not needed at runtime)
+scripts/
+tests/
+
+# Streamlit (legacy, not used in production)
+app.py
+
+# Build artifacts
+frontend/dist/

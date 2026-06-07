@@ -13,11 +13,14 @@ Orchestration 状态机 — Round 1 泛方案卡片 + Round 2 选择锁定 + 跳
 
 from __future__ import annotations
 
+import logging
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger("weekend_agent.orchestration")
 
 
 # ==================== 常量 ====================
@@ -1225,17 +1228,62 @@ class Orchestrator:
 
     # ---- Round 0 Q2: 小猜问 ----
 
+    @staticmethod
+    def _slots_to_followup_format(slots: Dict[str, Any]) -> Dict[str, Any]:
+        """将 Orchestrator 槽位格式映射为 generate_followup_questions 期望的格式。"""
+        group_map = {
+            "家庭出行": ["family_with_children"],
+            "朋友聚会": ["friends"],
+            "情侣约会": ["couple"],
+            "独自一人": ["solo"],
+        }
+        time_map = {
+            "今天": "now", "明天": "morning",
+            "本周末": "full_day", "下周末": "full_day",
+        }
+        mobility_map = {
+            "自驾": "driving", "打车": "taxi",
+            "公共交通": "transit", "无偏好": "",
+        }
+        transport = mobility_map.get(slots.get("mobility", ""), "")
+        context_modifiers = []
+        if transport == "driving":
+            context_modifiers.append("parking_needed")
+        elif transport == "transit":
+            context_modifiers.append("near_subway")
+
+        return {
+            "companion_context": group_map.get(slots.get("group_type", ""), ["solo"]),
+            "time_window": time_map.get(slots.get("time_slot", ""), ""),
+            "transportation": transport,
+            "context_modifiers": context_modifiers,
+        }
+
     def handle_slot_selection(self, selections: Dict[str, str]) -> Dict[str, Any]:
         """用户完成 Round 0 槽位选择后，更新槽位并触发小猜问。"""
         self.session.slots.update(selections)
         self.session.transition("slots_filled")
+
+        # 生成实际的猜测句
+        try:
+            from prompts import generate_followup_questions
+            followup_input = self._slots_to_followup_format(self.session.slots)
+            followup_result = generate_followup_questions(followup_input)
+            sentences = followup_result.get("sentences", [])
+            completeness = followup_result.get("completeness", 1.0)
+        except Exception as exc:
+            logger.warning("小猜问生成失败，使用兜底: %s", exc)
+            sentences = []
+            completeness = 0.0
+
         return {
             "round": 0,
-            "stage": "guess_questions_trigger",
-            "output_type": "slots_confirmed",
+            "stage": "guess_questions",
+            "output_type": "guess_sentences",
             "data": {
                 "slots": self.session.slots,
-                "next_action": "generate_guess_questions",
+                "sentences": sentences,
+                "completeness": completeness,
             },
         }
 

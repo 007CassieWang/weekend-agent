@@ -309,7 +309,12 @@ def parse_request_llm(
     return parsed
 
 
-def generate_followup_questions(collected_slots: Dict[str, Any]) -> Dict[str, Any]:
+def generate_followup_questions(
+    collected_slots: Dict[str, Any],
+    location_hint: Optional[str] = None,
+    locked_location: Optional[str] = None,
+    primary_intent: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     根据用户已选择的结构化槽位，生成个性化猜测句。
 
@@ -318,6 +323,9 @@ def generate_followup_questions(collected_slots: Dict[str, Any]) -> Dict[str, An
 
     Args:
         collected_slots: 包含 companion_context, time_window, transportation, context_modifiers 的字典
+        location_hint: GUESS_CARD 地点上下文（如"世纪公园绣球花，适合拍照"）
+        locked_location: GUESS_CARD 锁定的必含地点名
+        primary_intent: GUESS_CARD 的 primaryIntent
 
     Returns:
         {"sentences": [{"text": "...", "slots": [{"name": "...", "value": "..."}]}, ...],
@@ -327,7 +335,7 @@ def generate_followup_questions(collected_slots: Dict[str, Any]) -> Dict[str, An
 
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
-        sentences = _generate_guess_sentences_mock(collected_slots)
+        sentences = _generate_guess_sentences_mock(collected_slots, location_hint)
         return {
             "sentences": sentences,
             "completeness": _estimate_completeness(collected_slots, sentences),
@@ -350,11 +358,27 @@ def generate_followup_questions(collected_slots: Dict[str, Any]) -> Dict[str, An
     time_cn = time_labels.get(collected_slots.get("time_window", ""), collected_slots.get("time_window", "未指定"))
     transport_cn = transport_labels.get(collected_slots.get("transportation", ""), collected_slots.get("transportation", "未指定"))
 
+    # 地点上下文（来自 GUESS_CARD）
+    location_context = ""
+    if location_hint or locked_location:
+        loc_name = locked_location or location_hint.split("，")[0].split(",")[0]
+        location_context = f"""
+【重要】用户已从推荐卡片选择了具体目的地：{loc_name}（{location_hint or ''}）
+你生成的每句猜测句都应围绕用户在 {loc_name} 的行程展开，但不要反复出现地名——句子内容与目的地相关即可，用自然的方式细化需求（如拍照时段、体力要求、餐饮偏好、预算等），不必每句都塞进地名。
+【关键】猜测句是陈述句，不是疑问句！不要用"吗""呢""好不好""怎么样"结尾，不要用问号。用户点击后会作为信息补充，不是在回答问题。
+正确示例（陈述句，给信息让用户选）：
+- "下午光线好，拍照很出片"
+- "逛完在附近找家粤菜"
+- "地铁直达，不需要开车"
+- "半天刚好，不赶时间"
+先给1-2句围绕目的地场景的细化信息（陈述句），再补充1句通用槽位（人数/预算/交通）。地名最多在1句中自然出现。"""
+
     system_prompt = f"""你是一个中国本地生活规划助手的猜测模块。用户已经通过结构化表单提供了以下信息：
 
 - 和谁一起：{companion_cn}
 - 时间偏好：{time_cn}
 - 交通方式：{transport_cn}
+{location_context}
 
 你的任务是根据这些已收集的信息，推测用户可能还有哪些未明确的需求，生成 2-3 句猜测句。用户点击猜测句后会滑入对话框作为 query 发送，AI 根据这些信息生成方案。
 
@@ -425,11 +449,16 @@ slot value 是对应槽位的具体值，如 budget_level 的值可以是 "low"/
             base_url="https://api.deepseek.com/v1",
         )
 
+        if location_hint and locked_location:
+            user_msg = f"目的地={locked_location}（{location_hint}），和谁={companion_cn}，时间={time_cn}，交通={transport_cn}。请围绕{locked_location}生成2-3句陈述式猜测句（不要疑问句，不要问号）。句子应细化与目的地相关的需求（拍照时段、体力、餐饮偏好、预算等），不要每句都硬塞地名——目的地作为上下文而非每句的主角。"
+        else:
+            user_msg = f"已收集信息：和谁={companion_cn}，时间={time_cn}，交通={transport_cn}。请生成2-3句陈述式个性化猜测句（不要疑问句，不要问号）。"
+
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"已收集信息：和谁={companion_cn}，时间={time_cn}，交通={transport_cn}。请生成2-3句个性化猜测句。"},
+                {"role": "user", "content": user_msg},
             ],
             temperature=0.7,
             max_tokens=600,
@@ -455,6 +484,101 @@ slot value 是对应槽位的具体值，如 budget_level 的值可以是 "low"/
         result = {"sentences": _generate_guess_sentences_mock(collected_slots)}
         result["completeness"] = _estimate_completeness(collected_slots, result.get("sentences", []))
         return result
+
+
+def generate_creative_title(locations: List[str], scene_type: str, vibe: str = "", group_detail: str = "") -> str:
+    """
+    调用 DeepSeek 生成有画面感和节奏感的出行方案创意标题。
+
+    Args:
+        locations: 地点名称列表（活动名 + 餐厅名）
+        scene_type: 场景类型 (family / friends / couple / solo)
+        vibe: 氛围关键词，如"户外放松""文化体验""美食探店"
+        group_detail: 同行人详情，如"孩子5岁、老婆减肥""4人聚会"
+
+    Returns:
+        创意标题字符串，20字以内。LLM 不可用时返回基于规则的兜底标题。
+    """
+    scene_cn = {"family": "家庭出行", "friends": "朋友聚会", "couple": "情侣约会", "solo": "独自出行"}.get(scene_type, "出行")
+    loc_str = "、".join(locations[:5]) if locations else "本地"
+    vibe_str = vibe or "放松"
+
+    system_prompt = f"""你是一个出行方案标题生成器。根据用户出行的地点列表、场景类型和同行人信息，生成一个主题句式的主标题。
+
+规则：
+1. 禁止罗列地名。标题中最多出现1个地名作为锚点，其余地点用体验词、节奏词、氛围词替代
+2. 标题必须体现整段旅程的节奏变化或反差感，用"→"或"从…到…"串联不同阶段
+3. 标题要让没看过方案的人也能感受到这趟出行的氛围，而不是读行程单
+4. 长度控制在20字以内
+5. 全天多地点方案：捕捉地点间的体验反差，用时间跨度、感官跳跃或情绪转折制造张力
+6. 单地点方案：用地点+独特体验氛围组合，给平凡场景找到不平凡的切入点
+7. 风格要求：有画面感、有节奏感、略带诗意但不矫情，像一个会写文案的朋友随口说的那种
+
+好标题的标准：读完想发朋友圈，而不是读完知道去了哪。
+
+示例：
+- 从恐龙到微醺：一场穿越3亿年的周末
+- 从画布到酒杯：今天只负责好看
+- 去森林里撒个野，风会帮你带娃
+- 不用出城的微度假，一个商场就够了
+- 湖风胡同烤鸭香：北京该有的样子
+- 先动手玩再坐下来吃，科学也很有味道
+
+输出纯文本，不要 JSON，不要引号包裹，不要换行，不要任何前缀或解释。只要标题本身。"""
+
+    user_prompt = f"地点：{loc_str} | {scene_cn} | {group_detail or ''} | 氛围：{vibe_str}"
+
+    try:
+        import openai
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError("DEEPSEEK_API_KEY 环境变量未设置")
+
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com/v1",
+        )
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.9,
+            max_tokens=80,
+            timeout=8,
+        )
+
+        _try_record_usage(response, "deepseek-chat")
+        title = response.choices[0].message.content.strip()
+        # 清理可能的引号
+        title = title.strip('"').strip("'").strip("「").strip("」").strip("《").strip("》")
+        if len(title) > 25:
+            title = title[:24] + "…"
+        return title if title else _fallback_creative_title(locations, scene_type, group_detail)
+
+    except Exception:
+        return _fallback_creative_title(locations, scene_type, group_detail)
+
+
+def _fallback_creative_title(locations: List[str], scene_type: str, group_detail: str = "") -> str:
+    """LLM 不可用时的规则兜底标题。"""
+    scene_prefix = {
+        "family": "遛娃",
+        "friends": "聚会",
+        "couple": "约会",
+        "solo": "独处",
+    }.get(scene_type, "出行")
+
+    if len(locations) >= 3:
+        return f"从{locations[0][:3]}到{locations[-1][:3]}：一场{scene_prefix}慢行"
+    elif len(locations) == 2:
+        return f"{locations[0][:4]} + {locations[1][:4]}：{scene_prefix}刚刚好"
+    elif len(locations) == 1:
+        return f"在{locations[0][:6]}，给{scene_prefix}一个下午"
+    else:
+        return f"一场{scene_prefix}，随性出发"
 
 
 def _estimate_completeness(collected_slots: Dict[str, Any], sentences: list) -> float:
@@ -507,7 +631,7 @@ def _estimate_completeness(collected_slots: Dict[str, Any], sentences: list) -> 
     return min(len(intersection) / max(len(required_slots), 1), 1.0)
 
 
-def _generate_guess_sentences_mock(collected_slots: Dict[str, Any]) -> list:
+def _generate_guess_sentences_mock(collected_slots: Dict[str, Any], location_hint: Optional[str] = None) -> list:
     """Mock fallback: generate guess sentences with concrete slot values."""
     companion = (collected_slots.get("companion_context") or [])[:1]
     companion = companion[0] if companion else "unknown"
@@ -556,6 +680,16 @@ def _generate_guess_sentences_mock(collected_slots: Dict[str, Any]) -> list:
     }
 
     sentences = list(templates.get(companion, templates["unknown"]))
+
+    # 地点感知：GUESS_CARD 有锁定地点时，优先生成地点相关猜问（但不反复出现地名）
+    if location_hint:
+        loc_name = location_hint.split("，")[0].split(",")[0] if location_hint else ""
+        location_sentences = [
+            {"text": f"在{loc_name}待半天，不赶时间", "slots": [{"name": "activity_preference", "value": "relax"}, {"name": "low_energy", "value": True}]},
+            {"text": "逛完在附近找家餐厅", "slots": [{"name": "food_preference", "value": "casual"}]},
+            {"text": "不用预约，说走就走", "slots": [{"name": "no_reservation", "value": True}]},
+        ]
+        sentences = location_sentences[:2] + sentences
 
     # 根据交通方式补充
     if transport == "driving":

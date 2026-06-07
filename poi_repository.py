@@ -19,6 +19,7 @@ from schemas import Activity, Location, Restaurant
 
 
 DEFAULT_POI_SEED_PATH = Path(__file__).parent / "data" / "poi_seed.yaml"
+DEFAULT_KB_PATH = Path(__file__).parent / "data" / "poi-knowledge-base-shanghai.yaml"
 
 
 class PoiAdapter(Protocol):
@@ -41,6 +42,22 @@ class PoiAdapter(Protocol):
 
 ACTIVITY_FIELDS = {field.name for field in fields(Activity)}
 RESTAURANT_FIELDS = {field.name for field in fields(Restaurant)}
+
+
+def _normalize_tags(tags_value: Any) -> List[str]:
+    """将知识库三维 tags (attribute/popularity/action) 展平为 List[str]，兼容旧格式。"""
+    if isinstance(tags_value, dict):
+        flat: List[str] = []
+        for category in ("attribute", "popularity", "action"):
+            items = tags_value.get(category, [])
+            if isinstance(items, list):
+                for item in items:
+                    if item and item not in flat:
+                        flat.append(str(item))
+        return flat
+    if isinstance(tags_value, list):
+        return [str(t) for t in tags_value if t]
+    return []
 
 
 def _filter_model_fields(data: Dict[str, Any], allowed_fields: set[str]) -> Dict[str, Any]:
@@ -66,6 +83,7 @@ def _location_from_dict(data: Dict[str, Any]) -> Location:
 def _activity_from_dict(data: Dict[str, Any]) -> Activity:
     payload = dict(data)
     payload["location"] = _location_from_dict(payload["location"])
+    payload["tags"] = _normalize_tags(payload.get("tags"))
     model_payload = _filter_model_fields(payload, ACTIVITY_FIELDS)
     return _attach_extra_fields(Activity(**model_payload), payload, ACTIVITY_FIELDS)
 
@@ -73,6 +91,7 @@ def _activity_from_dict(data: Dict[str, Any]) -> Activity:
 def _restaurant_from_dict(data: Dict[str, Any]) -> Restaurant:
     payload = dict(data)
     payload["location"] = _location_from_dict(payload["location"])
+    payload["tags"] = _normalize_tags(payload.get("tags"))
     model_payload = _filter_model_fields(payload, RESTAURANT_FIELDS)
     return _attach_extra_fields(Restaurant(**model_payload), payload, RESTAURANT_FIELDS)
 
@@ -88,7 +107,7 @@ class PoiRepository:
     """Read-only POI repository backed by the local seed file."""
 
     def __init__(self, seed_path: Optional[Path] = None):
-        self.seed_path = seed_path or DEFAULT_POI_SEED_PATH
+        self.seed_path = seed_path or DEFAULT_KB_PATH
 
     def list_activity_dicts(self) -> List[Dict[str, Any]]:
         payload = load_poi_seed(str(self.seed_path))

@@ -1,0 +1,4494 @@
+version: 3
+description: 上海本地生活 POI 知识库（含三维标签/子设施/优惠券/近期活动/附近餐饮）
+metadata:
+  city: 上海
+  source: deepseek_generated_mock
+  real_world_claims: false
+  generator: scripts/generate_poi_knowledge_base.py
+  generated_at: '2026-06-04'
+activities:
+- id: act_001
+  name: 来福士广场
+  type: mall
+  location:
+    name: 来福士广场
+    address: 上海市黄浦区西藏中路268号
+    coordinates:
+      lat: 31.232
+      lng: 121.473
+    district: 人民广场商圈
+  distance_km: 0.1
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 人民广场核心地标，集购物、餐饮、娱乐于一体，品牌齐全。
+  tags:
+    attribute:
+    - 购物中心
+    - 地铁直达
+    - 美食
+    - 潮流
+    - 时尚潮流
+    - 热闹市井
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 人民广场站直达，吃喝玩乐一站式搞定。
+    action:
+    - 有停车券
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: 夏日冰爽节
+    date_range: 2026-06-15 ~ 2026-07-15
+    description: 全场餐饮满100减20，B1甜品买一送一
+    price: 免费参与
+    source: 商场官方公众号
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 8
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 5
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 5
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_002
+  name: 新世界城
+  type: mall
+  location:
+    name: 新世界城
+    address: 上海市黄浦区南京西路2-68号
+    coordinates:
+      lat: 31.233
+      lng: 121.47
+    district: 人民广场商圈
+  distance_km: 0.3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 200
+  queue_minutes: 15
+  reservation_available: false
+  need_booking: false
+  description: 老牌百货升级，拥有上海最大室内游乐场，亲子家庭必逛。
+  tags:
+    attribute:
+    - 百货
+    - 亲子
+    - 游乐
+    - 美食
+    - 亲子友好
+    - 热闹市井
+    - 购物中心
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 中等互动
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 历史建筑
+    - 带娃必去，室内游乐场一整天玩不够。
+    action:
+    - 需预约
+    - 有停车券
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: high
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: 亲子嘉年华
+    date_range: 2026-06-01 ~ 2026-09-01
+    description: 室内游乐场套票8折，亲子手工周末免费体验
+    price: 免费参与
+    source: 商场官方公众号
+  - name: 夏日积木大赛
+    date_range: 2026-07-01 ~ 2026-08-31
+    description: 乐高积木拼搭比赛，每周冠军有奖
+    price: 免费参与
+    source: 乐高探索中心公众号
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 8
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 5
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 8
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_003
+  name: 第一百货商业中心
+  type: mall
+  location:
+    name: 第一百货商业中心
+    address: 上海市黄浦区南京东路800号
+    coordinates:
+      lat: 31.235
+      lng: 121.476
+    district: 人民广场商圈
+  distance_km: 0.5
+  duration_minutes: 100
+  suggested_duration_minutes: 100
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 南京东路老字号，翻新后融合传统与潮流，网红店聚集。
+  tags:
+    attribute:
+    - 老字号
+    - 网红
+    - 购物
+    - 美食
+    - 文艺复古
+    - 时尚潮流
+    - 购物中心
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 网红打卡
+    - 历史建筑
+    action:
+    - 有停车券
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: 老字号美食节
+    date_range: 2026-06-10 ~ 2026-07-10
+    description: 汇聚上海老字号美食，品尝+文化展
+    price: 免费入场
+    source: 商场官网
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 8
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 10
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 8
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_004
+  name: 世茂广场
+  type: mall
+  location:
+    name: 世茂广场
+    address: 上海市黄浦区南京东路819号
+    coordinates:
+      lat: 31.234
+      lng: 121.474
+    district: 人民广场商圈
+  distance_km: 0.4
+  duration_minutes: 130
+  suggested_duration_minutes: 130
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 180
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 潮流地标，拥有M&M's旗舰店和乐高探索中心，年轻人最爱。
+  tags:
+    attribute:
+    - 潮流
+    - 旗舰店
+    - 亲子
+    - 打卡
+    - 时尚潮流
+    - 热闹市井
+    - 购物中心
+    - 亲子友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 中等互动
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 网红打卡
+    - M&M's和乐高旗舰店，潮人打卡圣地。
+    action:
+    - 需预约
+    - 有停车券
+  poi_category: 商场综合体.购物中心
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: M&M's夏日限定
+    date_range: 2026-06-01 ~ 2026-08-31
+    description: M&M's旗舰店夏日限定巧克力豆，限定配色礼盒上线
+    price: 免费参观
+    source: M&M's旗舰店公众号
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 5
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 10
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 5
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_005
+  name: 香港名都
+  type: mall
+  location:
+    name: 香港名都
+    address: 上海市黄浦区淮海东路99号
+    coordinates:
+      lat: 31.229
+      lng: 121.478
+    district: 人民广场商圈
+  distance_km: 0.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 100
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 淮海路小体量商场，餐饮丰富，适合快速觅食。
+  tags:
+    attribute:
+    - 餐饮
+    - 平价
+    - 便捷
+    - 安静治愈
+    - 烟火气
+    - 购物中心
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 淮海路上性价比高的美食聚集地。
+    action:
+    - 有停车场
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: 夏日狂欢季
+    date_range: 2026-06-15 ~ 2026-08-15
+    description: 全场折扣+亲子活动，周末有抽奖
+    price: 免费参与
+    source: 商场公众号
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 5
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 8
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 8
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_006
+  name: 上海来福士广场
+  type: mall
+  location:
+    name: 上海来福士广场
+    address: 上海市黄浦区西藏中路268号
+    coordinates:
+      lat: 31.232
+      lng: 121.473
+    district: 人民广场商圈
+  distance_km: 0.1
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 人民广场核心地标，集购物、餐饮、娱乐于一体，品牌齐全。
+  tags:
+    attribute:
+    - 购物中心
+    - 地铁直达
+    - 美食
+    - 潮流
+    - 时尚潮流
+    - 热闹市井
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 吃喝玩乐一站式搞定
+    - 人民广场站直达，吃喝玩乐一站式搞定。
+    action:
+    - 有停车券
+  poi_category: 商场综合体.购物中心
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 卡通尼乐园
+    type: 亲子乐园
+    price_per_person: 80
+    suggested_duration_minutes: 90
+    highlight: 室内游乐区，3-8岁孩子放电2小时
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity:
+      - 小红书亲子Top3
+      action:
+      - 有团购
+  - name: CGV影城
+    type: 私人影院
+    price_per_person: 70
+    suggested_duration_minutes: 120
+    highlight: 电动躺椅，观影体验舒适
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 有包间
+      popularity: []
+      action:
+      - 有团购
+  - name: 奇境GOLF
+    type: 聚会团建
+    price_per_person: 120
+    suggested_duration_minutes: 60
+    highlight: 室内迷你高尔夫，朋友聚会新奇选择
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 室内恒温
+      popularity: []
+      action: []
+  coupons:
+  - title: 停车券满200减10
+    platform: self
+    original_price: 10
+    coupon_price: 0
+    description: 当日消费满200元，停车立减10元
+    valid_until: '2026-09-30'
+  seasonal_events:
+  - name: 夏日冰爽节
+    date_range: 2026-06-15 ~ 2026-07-15
+    description: 全场餐饮满100减20，B1甜品买一送一
+    price: 免费参与
+    source: 商场官方公众号
+  nearby_dining:
+  - name: 鸿姐老火锅
+    cuisine: 火锅
+    price_per_person: 150
+    walking_minutes: 5
+    highlight: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝…
+  - name: 捞王锅物料理
+    cuisine: 火锅
+    price_per_person: 160
+    walking_minutes: 8
+    highlight: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心…
+  - name: 高老九火锅
+    cuisine: 火锅
+    price_per_person: 130
+    walking_minutes: 10
+    highlight: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵…
+- id: act_007
+  name: 晶耀前滩
+  type: commercial_street
+  location:
+    name: 晶耀前滩
+    address: 上海市浦东新区耀体路308号
+    coordinates:
+      lat: 31.155
+      lng: 121.483
+    district: 前滩太古里周边
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 前滩核心商圈，开放式街区设计，餐饮亲子一站搞定。
+  tags:
+    attribute:
+    - 亲子
+    - 美食
+    - 购物
+    - 街区
+    - 安静治愈
+    - 亲子友好
+    - 开放式街区
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 半户外
+    popularity:
+    - 网红打卡
+    - 前滩遛娃首选，户外空间大，餐饮选择多。
+    action:
+    - 有停车券
+  poi_category: 商业街/步行街.开放式街区
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: mixed
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons:
+  - title: 双人体验套餐
+    platform: meituan
+    original_price: 300
+    coupon_price: 225
+    description: 双人同行享优惠
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: Shake Shack（前滩太古里）
+    cuisine: 美式汉堡
+    price_per_person: 80
+    highlight: 纽约网红汉堡，户外座位看江景
+    walking_minutes: 10
+  - name: 孔雀川菜
+    cuisine: 川菜
+    price_per_person: 130
+    highlight: 蒂芙尼蓝装修川菜馆，颜值与口味并存
+    walking_minutes: 5
+- id: act_008
+  name: 前滩休闲公园步道
+  type: commercial_street
+  location:
+    name: 前滩休闲公园步道
+    address: 上海市浦东新区前滩大道北侧
+    coordinates:
+      lat: 31.152
+      lng: 121.479
+    district: 前滩太古里周边
+  distance_km: 1.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿江开放式步道，适合散步骑行，看江景吹江风。
+  tags:
+    attribute:
+    - 散步
+    - 骑行
+    - 江景
+    - 免费
+    - 户外
+    - 安静治愈
+    - 滨水步道
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    popularity:
+    - 网红打卡
+    - 免费开放的滨江步道，拍照打卡绝佳。
+    action: []
+  poi_category: 商业街/步行街.滨水步道
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: false
+  parking_available: false
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: Shake Shack（前滩太古里）
+    cuisine: 美式汉堡
+    price_per_person: 80
+    highlight: 纽约网红汉堡，户外座位看江景
+    walking_minutes: 8
+  - name: 孔雀川菜
+    cuisine: 川菜
+    price_per_person: 130
+    highlight: 蒂芙尼蓝装修川菜馆，颜值与口味并存
+    walking_minutes: 5
+- id: act_009
+  name: 三林塘老街
+  type: commercial_street
+  location:
+    name: 三林塘老街
+    address: 上海市浦东新区三林路810号
+    coordinates:
+      lat: 31.148
+      lng: 121.488
+    district: 前滩太古里周边
+  distance_km: 2.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 50
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 百年历史老街，保留传统建筑，小吃和手工艺品丰富。
+  tags:
+    attribute:
+    - 历史
+    - 小吃
+    - 手工艺
+    - 老街
+    - 文艺复古
+    - 热闹市井
+    - 历史街区
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 户外
+    popularity:
+    - 网红打卡
+    - 历史建筑
+    - 感受老上海风情，吃正宗三林塘肉皮。
+    action: []
+  poi_category: 商业街/步行街.历史街区
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities: []
+  coupons:
+  - title: 双人体验套餐
+    platform: meituan
+    original_price: 100
+    coupon_price: 75
+    description: 双人同行享优惠
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: Shake Shack（前滩太古里）
+    cuisine: 美式汉堡
+    price_per_person: 80
+    highlight: 纽约网红汉堡，户外座位看江景
+    walking_minutes: 10
+  - name: 孔雀川菜
+    cuisine: 川菜
+    price_per_person: 130
+    highlight: 蒂芙尼蓝装修川菜馆，颜值与口味并存
+    walking_minutes: 8
+- id: act_010
+  name: 世纪公园当代艺术馆
+  type: exhibition
+  location:
+    name: 世纪公园当代艺术馆
+    address: 上海市浦东新区锦绣路1001号
+    coordinates:
+      lat: 31.21
+      lng: 121.554
+    district: 世纪公园周边
+  distance_km: 1.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 6
+  group_friendly: true
+  price_per_person: 80
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 位于世纪公园内，定期举办国内外当代艺术展，空间开阔，适合亲子观展。
+  tags:
+    attribute:
+    - 当代艺术
+    - 亲子友好
+    - 公园景观
+    - 定期换展
+    - 安静治愈
+    - 文艺复古
+    - 户外
+    - 艺术馆
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 出片率最高
+    - 世纪公园里的艺术绿洲，遛娃看展两不误。
+    action:
+    - 当日可取号
+    - 有停车场
+  poi_category: 展览/美术馆.艺术馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons:
+  - title: 双人观展票
+    platform: meituan
+    original_price: 176
+    coupon_price: 120
+    description: 含2张门票
+    valid_until: '2026-06-30'
+  seasonal_events:
+  - name: 当代水墨双年展
+    date_range: 2026-06-01 ~ 2026-08-31
+    description: 国内外当代水墨艺术家联展
+    price: 含在门票内
+    source: 艺术馆官网
+  nearby_dining:
+  - name: 一坐一忘丽江主题餐厅
+    cuisine: 云南菜
+    price_per_person: 120
+    highlight: 丽江风情，黑松露炒饭很香
+    walking_minutes: 5
+  - name: O'mills Bakery
+    cuisine: 面包甜品
+    price_per_person: 65
+    highlight: 手工酸面包和肉桂卷，早午餐好去处
+    walking_minutes: 5
+- id: act_011
+  name: 浦东嘉里城艺术空间
+  type: exhibition
+  location:
+    name: 浦东嘉里城艺术空间
+    address: 上海市浦东新区花木路1378号
+    coordinates:
+      lat: 31.205
+      lng: 121.548
+    district: 世纪公园周边
+  distance_km: 2.0
+  duration_minutes: 60
+  suggested_duration_minutes: 60
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 嘉里城商场内的免费艺术展区，常有互动装置和亲子工作坊，逛商场顺路看展。
+  tags:
+    attribute:
+    - 免费
+    - 商场展览
+    - 互动装置
+    - 亲子工作坊
+    - 安静治愈
+    - 热闹市井
+    - 亲子友好
+    - 公共空间
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 出片率最高
+    - 免费开放
+    - 免费又好玩，带娃逛商场顺便看个展。
+    action:
+    - 有停车场
+  poi_category: 展览/美术馆.公共空间
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons: []
+  seasonal_events:
+  - name: 夏季限定展
+    date_range: 2026-06-15 ~ 2026-09-15
+    description: 夏季限定主题展览
+    price: 含在门票内
+    source: 场馆公众号
+  nearby_dining:
+  - name: 一坐一忘丽江主题餐厅
+    cuisine: 云南菜
+    price_per_person: 120
+    highlight: 丽江风情，黑松露炒饭很香
+    walking_minutes: 8
+  - name: O'mills Bakery
+    cuisine: 面包甜品
+    price_per_person: 65
+    highlight: 手工酸面包和肉桂卷，早午餐好去处
+    walking_minutes: 5
+- id: act_012
+  name: 上海科技馆特展厅
+  type: exhibition
+  location:
+    name: 上海科技馆特展厅
+    address: 上海市浦东新区世纪大道2000号
+    coordinates:
+      lat: 31.215
+      lng: 121.54
+    district: 世纪公园周边
+  distance_km: 2.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 45
+  queue_minutes: 20
+  reservation_available: true
+  need_booking: true
+  description: 科技馆内临时特展，主题涵盖科学、自然与艺术，互动性强，适合全年龄段。
+  tags:
+    attribute:
+    - 科技馆
+    - 互动体验
+    - 科普
+    - 临时展览
+    - 亲子友好
+    - 热闹市井
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 出片率最高
+    - 科技馆特展，寓教于乐，孩子玩到不想走。
+    action:
+    - 需预约
+    - 当日可取号
+    - 有停车场
+  poi_category: 展览/美术馆.科技馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons:
+  - title: 双人观展票
+    platform: meituan
+    original_price: 99
+    coupon_price: 67
+    description: 含2张门票
+    valid_until: '2026-06-30'
+  seasonal_events:
+  - name: 夏季限定展
+    date_range: 2026-06-15 ~ 2026-09-15
+    description: 夏季限定主题展览
+    price: 含在门票内
+    source: 场馆公众号
+  nearby_dining:
+  - name: 一坐一忘丽江主题餐厅
+    cuisine: 云南菜
+    price_per_person: 120
+    highlight: 丽江风情，黑松露炒饭很香
+    walking_minutes: 10
+  - name: O'mills Bakery
+    cuisine: 面包甜品
+    price_per_person: 65
+    highlight: 手工酸面包和肉桂卷，早午餐好去处
+    walking_minutes: 10
+- id: act_013
+  name: 世纪汇广场光影展
+  type: exhibition
+  location:
+    name: 世纪汇广场光影展
+    address: 上海市浦东新区世纪大道1192号
+    coordinates:
+      lat: 31.218
+      lng: 121.53
+    district: 世纪公园周边
+  distance_km: 3.0
+  duration_minutes: 45
+  suggested_duration_minutes: 45
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 68
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: false
+  description: 沉浸式光影艺术展，四季主题变换，网红打卡圣地，出片率极高。
+  tags:
+    attribute:
+    - 沉浸式
+    - 光影
+    - 网红打卡
+    - 商场展览
+    - 浪漫
+    - 时尚潮流
+    - 沉浸式体验
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 出片率最高
+    - 光影交织的梦幻空间，随手一拍都是大片。
+    action:
+    - 当日可取号
+    - 有停车场
+  poi_category: 展览/美术馆.沉浸式体验
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons:
+  - title: 双人观展票
+    platform: meituan
+    original_price: 149
+    coupon_price: 102
+    description: 含2张门票
+    valid_until: '2026-06-30'
+  seasonal_events:
+  - name: 夏日花火·光影特展
+    date_range: 2026-06-15 ~ 2026-09-15
+    description: 日式花火大会主题光影展，沉浸式烟火体验
+    price: 68元/人
+    source: 世纪汇广场公众号
+  nearby_dining:
+  - name: 一坐一忘丽江主题餐厅
+    cuisine: 云南菜
+    price_per_person: 120
+    highlight: 丽江风情，黑松露炒饭很香
+    walking_minutes: 10
+  - name: O'mills Bakery
+    cuisine: 面包甜品
+    price_per_person: 65
+    highlight: 手工酸面包和肉桂卷，早午餐好去处
+    walking_minutes: 10
+- id: act_014
+  name: 上海自然博物馆
+  type: museum
+  location:
+    name: 上海自然博物馆
+    address: 上海市静安区北京西路510号
+    coordinates:
+      lat: 31.228
+      lng: 121.455
+    district: 静安寺商圈
+  distance_km: 0.8
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 30
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 亚洲最大的自然博物馆之一，恐龙骨架和动物标本超震撼，亲子必打卡。
+  tags:
+    attribute:
+    - 亲子
+    - 恐龙
+    - 科普
+    - 室内
+    - 网红打卡
+    - 亲子友好
+    - 安静治愈
+    - 自然博物馆
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 步行较多
+    popularity:
+    - 寓教于乐
+    - 上海自然博物馆恐龙展区是孩子的最爱，标本栩栩如生，寓教于乐。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 博物馆.科技馆.自然博物馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: high
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 4D影院
+    type: 私人影院
+    price_per_person: 30
+    suggested_duration_minutes: 25
+    highlight: 恐龙主题4D短片，身临其境
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity: []
+      action:
+      - 现场购票即可
+  - name: 探索中心互动区
+    type: 亲子乐园
+    price_per_person: 20
+    suggested_duration_minutes: 40
+    highlight: 化石挖掘体验+标本制作，动手学科学
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 中等互动
+      popularity:
+      - 孩子玩到不想走
+      action:
+      - 需预约
+  coupons:
+  - title: 双人参观票
+    platform: meituan
+    original_price: 66
+    coupon_price: 46
+    description: 含2张门票，比单买优惠
+    valid_until: '2026-08-31'
+  - title: 1大1小亲子票
+    platform: dianping
+    original_price: 48
+    coupon_price: 33
+    description: 含1成人+1儿童门票
+    valid_until: '2026-08-31'
+  seasonal_events:
+  - name: 深海奇境特展
+    date_range: 2026-05-01 ~ 2026-08-31
+    description: 深海生物标本+VR沉浸体验，8个互动装置
+    price: 含在门票内
+    source: 上海自然博物馆官网
+  - name: 恐龙星球·暑期特别展
+    date_range: 2026-06-20 ~ 2026-09-20
+    description: 大型恐龙骨架+AI互动，还原侏罗纪世界
+    price: 含在门票内
+    source: 上海自然博物馆官网
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 8
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 10
+- id: act_015
+  name: 上海电影博物馆
+  type: museum
+  location:
+    name: 上海电影博物馆
+    address: 上海市徐汇区漕溪北路595号
+    coordinates:
+      lat: 31.188
+      lng: 121.436
+    district: 静安寺商圈
+  distance_km: 4.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 5
+  group_friendly: true
+  price_per_person: 60
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 沉浸式体验电影发展史，互动装置多，适合影迷和亲子家庭。
+  tags:
+    attribute:
+    - 电影
+    - 互动
+    - 亲子
+    - 文化
+    - 室内
+    - 文艺复古
+    - 时尚潮流
+    - 行业博物馆
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    popularity:
+    - 寓教于乐
+    - 电影博物馆的4D影院和动画展区互动性超强，小朋友玩得不想走。
+    action:
+    - 当日可取号
+    - 需预约
+    - 有停车场
+  poi_category: 博物馆.科技馆.行业博物馆
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 4D影院
+    type: 私人影院
+    price_per_person: 30
+    suggested_duration_minutes: 30
+    highlight: 经典电影4D重现，沉浸感强
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 室内恒温
+      popularity: []
+      action:
+      - 现场购票即可
+  coupons:
+  - title: 双人参观票
+    platform: meituan
+    original_price: 132
+    coupon_price: 92
+    description: 含2张门票，比单买优惠
+    valid_until: '2026-08-31'
+  - title: 1大1小亲子票
+    platform: dianping
+    original_price: 96
+    coupon_price: 66
+    description: 含1成人+1儿童门票
+    valid_until: '2026-08-31'
+  seasonal_events:
+  - name: 百年上海电影回顾展
+    date_range: 2026-06-01 ~ 2026-09-30
+    description: 经典电影道具+海报展，含老电影放映
+    price: 含在门票内
+    source: 上海电影博物馆公众号
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 5
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 8
+- id: act_016
+  name: 上海儿童博物馆
+  type: museum
+  location:
+    name: 上海儿童博物馆
+    address: 上海市长宁区宋园路61号
+    coordinates:
+      lat: 31.209
+      lng: 121.387
+    district: 静安寺商圈
+  distance_km: 3.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 2
+  group_friendly: true
+  price_per_person: 20
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 专为儿童设计的科普乐园，动手实验和角色扮演区，低龄宝宝友好。
+  tags:
+    attribute:
+    - 亲子
+    - 儿童
+    - 科普
+    - 互动
+    - 室内
+    - 亲子友好
+    - 热闹市井
+    - 儿童博物馆
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 中等互动
+    popularity:
+    - 寓教于乐
+    - 儿童博物馆的超市角色扮演区让宝宝沉浸式购物，性价比超高。
+    action:
+    - 有停车场
+  poi_category: 博物馆.科技馆.儿童博物馆
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons:
+  - title: 双人参观票
+    platform: meituan
+    original_price: 44
+    coupon_price: 30
+    description: 含2张门票，比单买优惠
+    valid_until: '2026-08-31'
+  - title: 1大1小亲子票
+    platform: dianping
+    original_price: 32
+    coupon_price: 22
+    description: 含1成人+1儿童门票
+    valid_until: '2026-08-31'
+  seasonal_events:
+  - name: 小小科学家暑期营
+    date_range: 2026-07-01 ~ 2026-08-31
+    description: 每周六科学实验课，适合3-7岁
+    price: 50元/次
+    source: 儿童博物馆官网
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 5
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 10
+- id: act_017
+  name: 大学路滨河绿地
+  type: park
+  location:
+    name: 大学路滨河绿地
+    address: 上海市杨浦区大学路近政民路
+    coordinates:
+      lat: 31.298
+      lng: 121.515
+    district: 五角场商圈
+  distance_km: 2
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿着小河的线性公园，草坪开阔，适合野餐散步，周边咖啡馆林立。
+  tags:
+    attribute:
+    - 滨水步道
+    - 野餐
+    - 遛狗
+    - 拍照
+    - 文艺复古
+    - 小清新
+    - 滨水公园
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 户外
+    - 低强度轻松
+    popularity:
+    - 免费开放
+    - 闹中取静的滨水绿带，适合周末放空。
+    action: []
+  poi_category: 公园.滨水公园
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 8
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 10
+- id: act_018
+  name: 新江湾城生态湿地
+  type: park
+  location:
+    name: 新江湾城生态湿地
+    address: 上海市杨浦区政和路与国秀路交叉口
+    coordinates:
+      lat: 31.31
+      lng: 121.505
+    district: 五角场商圈
+  distance_km: 3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 城市中的原生态湿地，观鸟步道和木栈道，自然气息浓厚。
+  tags:
+    attribute:
+    - 湿地
+    - 观鸟
+    - 自然
+    - 徒步
+    - 户外
+    - 安静治愈
+    - 湿地公园
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 有停车场
+    popularity:
+    - 免费开放
+    - 市区少有的生态秘境，带娃亲近自然首选。
+    action:
+    - 有停车场
+  poi_category: 公园.湿地公园
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: false
+  parking_available: true
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 5
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 5
+- id: act_019
+  name: 创智天地广场
+  type: park
+  location:
+    name: 创智天地广场
+    address: 上海市杨浦区淞沪路290号
+    coordinates:
+      lat: 31.293
+      lng: 121.52
+    district: 五角场商圈
+  distance_km: 2.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 开放式广场，常有市集和活动，周边餐饮丰富，适合闲逛。
+  tags:
+    attribute:
+    - 广场
+    - 市集
+    - 活动
+    - 餐饮
+    - 时尚潮流
+    - 城市广场
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 户外
+    popularity:
+    - 免费开放
+    - 五角场核心区的活力聚集地，吃喝玩乐一站式。
+    action:
+    - 需预约
+    - 有停车场
+  poi_category: 公园.城市广场
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 10
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 8
+- id: act_020
+  name: 江湾体育场滨水步道
+  type: park
+  location:
+    name: 江湾体育场滨水步道
+    address: 上海市杨浦区国和路346号
+    coordinates:
+      lat: 31.305
+      lng: 121.51
+    district: 五角场商圈
+  distance_km: 2
+  duration_minutes: 100
+  suggested_duration_minutes: 100
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 沿河而建的健身步道，连接体育场，适合跑步和散步。
+  tags:
+    attribute:
+    - 步道
+    - 跑步
+    - 健身
+    - 滨水
+    - 中等互动
+    - 安静治愈
+    - 滨水公园
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 户外
+    - 低强度轻松
+    popularity:
+    - 免费开放
+    - 沿河慢跑好去处，人少景美。
+    action: []
+  poi_category: 公园.滨水公园
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: outdoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 10
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 5
+- id: act_021
+  name: 衡山电影院
+  type: cinema
+  location:
+    name: 衡山电影院
+    address: 上海市徐汇区衡山路838号
+    coordinates:
+      lat: 31.205
+      lng: 121.442
+    district: 武康路衡复街区
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 3
+  group_friendly: true
+  price_per_person: 80
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 老牌电影院，位于衡复历史风貌区，装修复古，观影氛围浓厚。
+  tags:
+    attribute:
+    - 老字号
+    - 历史建筑
+    - 文艺
+    - 小厅
+    - 衡复风貌
+    - 文艺复古
+    - 安静治愈
+    - 电影院
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 历史建筑
+    - 衡复风貌
+    - 在衡复历史街区体验老上海电影情怀，适合文艺青年和怀旧人群。
+    action:
+    - 当日可取号
+  poi_category: 电影院
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: VIP情侣厅
+    type: 私人影院
+    price_per_person: 120
+    suggested_duration_minutes: 120
+    highlight: 双人沙发座，私密观影体验
+    child_friendly: false
+    tags:
+      attribute:
+      - 情侣约会
+      - 有包间
+      popularity: []
+      action:
+      - 有双人套餐
+  coupons:
+  - title: 双人观影套餐
+    platform: dianping
+    original_price: 200
+    coupon_price: 115
+    description: 2张电影票+1份爆米花+2杯可乐
+    valid_until: '2026-07-15'
+  seasonal_events: []
+  nearby_dining:
+  - name: '% Arabica（武康路）'
+    cuisine: 精品咖啡
+    price_per_person: 45
+    highlight: 京都网红咖啡，武康路拍照打卡点
+    walking_minutes: 10
+  - name: RAC Bar
+    cuisine: 法式简餐
+    price_per_person: 120
+    highlight: 武康路网红早午餐，可丽饼一绝
+    walking_minutes: 8
+- id: act_022
+  name: 武康路光影艺术影院
+  type: cinema
+  location:
+    name: 武康路光影艺术影院
+    address: 上海市徐汇区武康路376号
+    coordinates:
+      lat: 31.209
+      lng: 121.438
+    district: 武康路衡复街区
+  distance_km: 1.2
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: false
+  child_min_age: 12
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 5
+  reservation_available: true
+  need_booking: true
+  description: 小众艺术影院，定期举办导演见面会和主题影展，环境优雅。
+  tags:
+    attribute:
+    - 艺术影院
+    - 小众
+    - 影展
+    - 文艺
+    - 武康路
+    - 文艺复古
+    - 安静治愈
+    - 禅意雅致
+    - 电影院
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 历史建筑
+    - 衡复风貌
+    - 武康路上的艺术影院，观影之余可漫步老洋房街区，体验文艺上海。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 电影院
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: VIP情侣厅
+    type: 私人影院
+    price_per_person: 120
+    suggested_duration_minutes: 120
+    highlight: 双人沙发座，私密观影体验
+    child_friendly: false
+    tags:
+      attribute:
+      - 情侣约会
+      - 有包间
+      popularity: []
+      action:
+      - 有双人套餐
+  coupons:
+  - title: 双人观影套餐
+    platform: dianping
+    original_price: 280
+    coupon_price: 172
+    description: 2张电影票+1份爆米花+2杯可乐
+    valid_until: '2026-07-15'
+  seasonal_events: []
+  nearby_dining:
+  - name: '% Arabica（武康路）'
+    cuisine: 精品咖啡
+    price_per_person: 45
+    highlight: 京都网红咖啡，武康路拍照打卡点
+    walking_minutes: 10
+  - name: RAC Bar
+    cuisine: 法式简餐
+    price_per_person: 120
+    highlight: 武康路网红早午餐，可丽饼一绝
+    walking_minutes: 10
+- id: act_023
+  name: 星聚会KTV（新天地店）
+  type: ktv
+  location:
+    name: 星聚会KTV（新天地店）
+    address: 上海市黄浦区马当路245号新天地时尚B1层
+    coordinates:
+      lat: 31.218
+      lng: 121.475
+    district: 新天地周边
+  distance_km: 0.3
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 新天地人气KTV，包厢设备新，曲库全，适合朋友聚会嗨唱。
+  tags:
+    attribute:
+    - KTV
+    - 聚会
+    - 唱歌
+    - 新天地
+    - 夜生活
+    - 热闹市井
+    - 时尚潮流
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 中等互动
+    popularity:
+    - 聚会首选
+    - 新天地核心位置，地铁直达，聚会首选。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 休闲娱乐.KTV
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: high
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 小包（2-4人）
+    type: 聚会团建
+    price_per_person: 80
+    suggested_duration_minutes: 120
+    highlight: 适合2-4人嗨唱，音效专业
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      popularity: []
+      action:
+      - 有团购
+  - name: 中包（4-8人）
+    type: 聚会团建
+    price_per_person: 100
+    suggested_duration_minutes: 180
+    highlight: 适合4-8人聚会，有独立舞台
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      - 团建首选
+      popularity: []
+      action:
+      - 有团购
+  - name: 大包（8-15人）
+    type: 聚会团建
+    price_per_person: 90
+    suggested_duration_minutes: 180
+    highlight: 超大包间，适合团建和生日趴
+    child_friendly: false
+    tags:
+      attribute:
+      - 团建首选
+      popularity: []
+      action:
+      - 有团购
+  coupons:
+  - title: 4人欢唱套餐（含饮品）
+    platform: meituan
+    original_price: 528
+    coupon_price: 326
+    description: 含4小时欢唱+饮品小食
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: Le Comptoir de Pierre Gagnaire
+    cuisine: 西餐
+    price_per_person: 1200
+    walking_minutes: 5
+    highlight: 法国名厨Pierre Gagnaire的上海分店，经典法式料…
+  - name: Polux by Paul Pairet
+    cuisine: 西餐
+    price_per_person: 400
+    walking_minutes: 8
+    highlight: Paul Pairet打造的轻松法式小馆，招牌脆皮猪排和土豆…
+- id: act_024
+  name: 迷之密室逃脱（新天地店）
+  type: 桌游
+  location:
+    name: 迷之密室逃脱（新天地店）
+    address: 上海市黄浦区济南路9号8楼
+    coordinates:
+      lat: 31.216
+      lng: 121.473
+    district: 新天地周边
+  distance_km: 0.5
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 8
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 20
+  reservation_available: true
+  need_booking: true
+  description: 沉浸式密室体验，机械解谜与剧情结合，适合团队协作。
+  tags:
+    attribute:
+    - 密室逃脱
+    - 解谜
+    - 团队
+    - 沉浸式
+    - 新天地
+    - 中等互动
+    - 亲子友好
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    popularity:
+    - 团建首选
+    - 新天地热门密室，主题新颖，适合朋友或公司团建。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 休闲娱乐.密室逃脱
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 机械解谜主题《星际迷航》
+    type: 聚会团建
+    price_per_person: 150
+    suggested_duration_minutes: 90
+    highlight: 科幻主题，机械解谜+互动装置，2-6人最佳
+    child_friendly: true
+    tags:
+      attribute:
+      - 中等互动
+      - 室内恒温
+      popularity:
+      - 小红书好评如潮
+      action:
+      - 需预约
+  - name: 沉浸剧情《午夜钟声》
+    type: 聚会团建
+    price_per_person: 168
+    suggested_duration_minutes: 120
+    highlight: 悬疑推理剧情，需团队协作，4-8人
+    child_friendly: false
+    tags:
+      attribute:
+      - 中等互动
+      - 室内恒温
+      popularity:
+      - 新天地密室Top3
+      action:
+      - 需预约
+  coupons:
+  - title: 4人密室逃脱套餐
+    platform: meituan
+    original_price: 600
+    coupon_price: 450
+    description: 4人组队享75折
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: Le Comptoir de Pierre Gagnaire
+    cuisine: 西餐
+    price_per_person: 1200
+    walking_minutes: 5
+    highlight: 法国名厨Pierre Gagnaire的上海分店，经典法式料…
+  - name: Polux by Paul Pairet
+    cuisine: 西餐
+    price_per_person: 400
+    walking_minutes: 8
+    highlight: Paul Pairet打造的轻松法式小馆，招牌脆皮猪排和土豆…
+- id: act_025
+  name: 戏精学院·沉浸式剧本杀（新天地旗舰店）
+  type: 剧本杀
+  location:
+    name: 戏精学院·沉浸式剧本杀（新天地旗舰店）
+    address: 上海市黄浦区淮海中路333号新天地广场5层
+    coordinates:
+      lat: 31.219
+      lng: 121.476
+    district: 新天地周边
+  distance_km: 0.4
+  duration_minutes: 180
+  suggested_duration_minutes: 180
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 专业剧本杀馆，换装沉浸，DM带本，体验感满分。
+  tags:
+    attribute:
+    - 剧本杀
+    - 沉浸式
+    - 换装
+    - 推理
+    - 新天地
+    - 时尚潮流
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    popularity:
+    - 沉浸式体验标杆
+    - 新天地旗舰店，剧本质量高，适合剧本杀爱好者。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 休闲娱乐.剧本杀
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: medium
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 欢乐本《恋爱脑大作战》（4-6人）
+    type: 聚会团建
+    price_per_person: 158
+    suggested_duration_minutes: 150
+    highlight: 轻松搞笑，适合新手和朋友聚会
+    child_friendly: false
+    tags:
+      attribute:
+      - 朋友聚会
+      popularity: []
+      action:
+      - 需预约
+  - name: 硬核推理《沉默的真相》（6-8人）
+    type: 聚会团建
+    price_per_person: 198
+    suggested_duration_minutes: 180
+    highlight: 烧脑推理，多结局，老玩家必玩
+    child_friendly: false
+    tags:
+      attribute:
+      - 中等互动
+      - 室内恒温
+      popularity:
+      - 剧本杀圈口碑神作
+      action:
+      - 需预约
+      - 周末需提前3天
+  - name: 换装沉浸《长安十二时辰》（8-12人）
+    type: 聚会团建
+    price_per_person: 280
+    suggested_duration_minutes: 240
+    highlight: 古风换装+实景沉浸，NPC互动，团建首选
+    child_friendly: false
+    tags:
+      attribute:
+      - 团建首选
+      - 室内恒温
+      popularity:
+      - 出片率最高
+      action:
+      - 必须预约
+      - 周末需提前3天
+  coupons:
+  - title: 6人剧本杀套餐
+    platform: meituan
+    original_price: 1680
+    coupon_price: 1209
+    description: 6人同行享72折
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: Le Comptoir de Pierre Gagnaire
+    cuisine: 西餐
+    price_per_person: 1200
+    walking_minutes: 8
+    highlight: 法国名厨Pierre Gagnaire的上海分店，经典法式料…
+  - name: Polux by Paul Pairet
+    cuisine: 西餐
+    price_per_person: 400
+    walking_minutes: 10
+    highlight: Paul Pairet打造的轻松法式小馆，招牌脆皮猪排和土豆…
+- id: act_026
+  name: 静安寺手作工坊
+  type: handicraft
+  location:
+    name: 静安寺手作工坊
+    address: 上海市静安区南京西路1688号
+    coordinates:
+      lat: 31.224
+      lng: 121.448
+    district: 静安寺商圈
+  distance_km: 0.5
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: true
+  child_min_age: 5
+  group_friendly: true
+  price_per_person: 198
+  queue_minutes: 0
+  reservation_available: true
+  need_booking: true
+  description: 隐藏在静安寺商圈的宝藏手作店，提供陶艺、木工、皮具等多种手作体验，老师耐心指导，成品可带走。
+  tags:
+    attribute:
+    - 手工体验
+    - 陶艺
+    - 木工
+    - 静安寺
+    - 亲子活动
+    - 文艺复古
+    - 安静治愈
+    - 手作体验
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 文艺打卡地
+    - 历史建筑
+    - 静安寺附近的手作体验，适合亲子或朋友一起，放松身心。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 手作/市集.手作体验
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 陶艺拉坯体验
+    type: 手作体验
+    price_per_person: 158
+    suggested_duration_minutes: 90
+    highlight: 从揉泥到拉坯，老师一对一指导，作品可带走
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 安静治愈
+      popularity: []
+      action:
+      - 需预约
+  - name: 木工筷子制作
+    type: 手作体验
+    price_per_person: 128
+    suggested_duration_minutes: 60
+    highlight: 亲手打造一双木筷，体验传统木工技艺
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 安静治愈
+      popularity: []
+      action:
+      - 需预约
+  - name: 皮具钥匙扣DIY
+    type: 手作体验
+    price_per_person: 88
+    suggested_duration_minutes: 45
+    highlight: 入门皮具体验，选皮、打孔、缝线，成品实用美观
+    child_friendly: true
+    tags:
+      attribute:
+      - 亲子友好
+      - 低强度轻松
+      popularity: []
+      action:
+      - 需预约
+  coupons:
+  - title: 双人体验套餐
+    platform: meituan
+    original_price: 396
+    coupon_price: 297
+    description: 双人同行享优惠
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 10
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 8
+- id: act_027
+  name: 巨鹿路创意市集
+  type: handicraft
+  location:
+    name: 巨鹿路创意市集
+    address: 上海市静安区巨鹿路758号
+    coordinates:
+      lat: 31.226
+      lng: 121.452
+    district: 静安寺商圈
+  distance_km: 1.2
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 0
+  queue_minutes: 0
+  reservation_available: false
+  need_booking: false
+  description: 周末限定的户外创意市集，汇集独立设计师、手作达人、美食摊位，还有现场音乐表演，氛围超棒。
+  tags:
+    attribute:
+    - 创意市集
+    - 独立设计
+    - 手作
+    - 美食
+    - 周末活动
+    - 热闹市井
+    - 时尚潮流
+    - 亲子友好
+    - 宠物友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 户外
+    popularity:
+    - 文艺打卡地
+    - 巨鹿路周末必逛的创意市集，淘手作好物，感受上海文艺气息。
+    action: []
+  poi_category: 手作/市集.创意市集
+  elder_friendly: true
+  pet_friendly: true
+  noise_level: medium
+  walking_load: medium
+  indoor_outdoor: outdoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities: []
+  coupons: []
+  seasonal_events: []
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 10
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 5
+- id: act_028
+  name: 芮欧百货手工坊
+  type: handicraft
+  location:
+    name: 芮欧百货手工坊
+    address: 上海市静安区南京西路1601号
+    coordinates:
+      lat: 31.225
+      lng: 121.449
+    district: 静安寺商圈
+  distance_km: 0.3
+  duration_minutes: 150
+  suggested_duration_minutes: 150
+  child_friendly: true
+  child_min_age: 8
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 芮欧百货内的高端手工坊，提供金工银饰、皮具定制等课程，环境优雅，适合情侣或闺蜜体验。
+  tags:
+    attribute:
+    - 金工
+    - 银饰
+    - 皮具
+    - 高端手工
+    - 静安寺
+    - 禅意雅致
+    - 手作体验
+    - 亲子友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 文艺打卡地
+    - 芮欧百货内的精品手工坊，亲手打造专属饰品，品质感十足。
+    action:
+    - 需预约
+    - 当日可取号
+    - 有停车场
+  poi_category: 手作/市集.手作体验
+  elder_friendly: false
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 银饰戒指DIY
+    type: 手作体验
+    price_per_person: 380
+    suggested_duration_minutes: 120
+    highlight: 从银料到成品戒指，全程指导，适合情侣
+    child_friendly: false
+    tags:
+      attribute:
+      - 情侣约会
+      - 禅意雅致
+      popularity:
+      - 小红书最火银饰DIY
+      action:
+      - 必须预约
+      - 周末需提前3天
+  - name: 皮具手包定制
+    type: 手作体验
+    price_per_person: 580
+    suggested_duration_minutes: 180
+    highlight: 意大利植鞣皮，手工缝制专属手包
+    child_friendly: false
+    tags:
+      attribute:
+      - 情侣约会
+      - 禅意雅致
+      popularity:
+      - 品质感十足
+      action:
+      - 必须预约
+  coupons:
+  - title: 双人体验套餐
+    platform: meituan
+    original_price: 560
+    coupon_price: 420
+    description: 双人同行享优惠
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 南翔馒头店（静安店）
+    cuisine: 上海小笼
+    price_per_person: 80
+    highlight: 百年老店，鲜肉小笼汤汁饱满
+    walking_minutes: 5
+  - name: CHARLIE'S 粉红汉堡
+    cuisine: 美式汉堡
+    price_per_person: 65
+    highlight: 网红粉红汉堡，奶昔也很赞
+    walking_minutes: 8
+- id: act_029
+  name: 书屿SPA·五角场旗舰店
+  type: spa
+  location:
+    name: 书屿SPA·五角场旗舰店
+    address: 上海市杨浦区淞沪路77号万达广场B1层
+    coordinates:
+      lat: 31.298
+      lng: 121.518
+    district: 五角场商圈
+  distance_km: 0.3
+  duration_minutes: 120
+  suggested_duration_minutes: 120
+  child_friendly: false
+  child_min_age: 0
+  group_friendly: true
+  price_per_person: 298
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: true
+  description: 藏在书店里的静心SPA，精油香氛与阅读结合，适合压力大的都市人。
+  tags:
+    attribute:
+    - 精油SPA
+    - 书店风
+    - 减压
+    - 五角场
+    - 预约制
+    - 安静治愈
+    - 文艺复古
+    - 美容SPA
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 小众宝藏
+    - 一边翻书一边做SPA，五角场白领的隐秘放松角落。
+    action:
+    - 需预约
+    - 当日可取号
+    - 有停车场
+  poi_category: 生活服务.美容SPA
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 精油全身按摩（60分钟）
+    type: 洗浴汗蒸
+    price_per_person: 298
+    suggested_duration_minutes: 60
+    highlight: 选用泰国进口精油，深度放松肌肉
+    child_friendly: false
+    tags:
+      attribute:
+      - 安静治愈
+      popularity: []
+      action:
+      - 需预约
+      - 有团购
+  - name: 书店阅读+头疗（90分钟）
+    type: 其他
+    price_per_person: 198
+    suggested_duration_minutes: 90
+    highlight: 边看书边做头部按摩，白领减压神器
+    child_friendly: false
+    tags:
+      attribute:
+      - 安静治愈
+      - 低强度轻松
+      popularity:
+      - 五角场白领最爱
+      action:
+      - 需预约
+  coupons:
+  - title: 首次体验5折
+    platform: dianping
+    original_price: 298
+    coupon_price: 149
+    description: 新客首次体验基础项目享5折
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 10
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 10
+- id: act_030
+  name: 云水间·身心放松馆
+  type: spa
+  location:
+    name: 云水间·身心放松馆
+    address: 上海市杨浦区政通路100号创智天地3号楼
+    coordinates:
+      lat: 31.302
+      lng: 121.51
+    district: 五角场商圈
+  distance_km: 0.8
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: false
+  child_min_age: 12
+  group_friendly: true
+  price_per_person: 398
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: true
+  description: 日式禅意SPA，提供颂钵疗愈和热石按摩，环境静谧雅致。
+  tags:
+    attribute:
+    - 日式SPA
+    - 颂钵
+    - 热石
+    - 禅意
+    - 五角场
+    - 安静治愈
+    - 禅意雅致
+    - 美容SPA
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 有停车场
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 小众宝藏
+    - 五角场难得的高品质日式SPA，颂钵疗愈让你卸下疲惫。
+    action:
+    - 需预约
+    - 当日可取号
+    - 有停车场
+  poi_category: 生活服务.美容SPA
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: false
+  near_subway: true
+  parking_available: true
+  sub_facilities:
+  - name: 颂钵疗愈（90分钟）
+    type: 其他
+    price_per_person: 498
+    suggested_duration_minutes: 90
+    highlight: 7个颂钵对应7个脉轮，深度冥想体验
+    child_friendly: false
+    tags:
+      attribute:
+      - 禅意雅致
+      - 安静治愈
+      popularity:
+      - 上海独有
+      action:
+      - 必须预约
+  - name: 热石按摩（75分钟）
+    type: 洗浴汗蒸
+    price_per_person: 398
+    suggested_duration_minutes: 75
+    highlight: 火山热石按摩，驱寒暖身，适合体寒人群
+    child_friendly: false
+    tags:
+      attribute:
+      - 安静治愈
+      popularity: []
+      action:
+      - 需预约
+      - 有团购
+  coupons:
+  - title: 首次体验5折
+    platform: dianping
+    original_price: 398
+    coupon_price: 199
+    description: 新客首次体验基础项目享5折
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 5
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 10
+- id: act_031
+  name: 阅光·沉浸式阅读角
+  type: spa
+  location:
+    name: 阅光·沉浸式阅读角
+    address: 上海市杨浦区大学路118号
+    coordinates:
+      lat: 31.295
+      lng: 121.512
+    district: 五角场商圈
+  distance_km: 0.5
+  duration_minutes: 180
+  suggested_duration_minutes: 180
+  child_friendly: true
+  child_min_age: 6
+  group_friendly: true
+  price_per_person: 68
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 大学路上的独立书店+轻SPA体验区，可边读书边享受头部按摩。
+  tags:
+    attribute:
+    - 书店
+    - 头部按摩
+    - 咖啡
+    - 大学路
+    - 文艺
+    - 文艺复古
+    - 安静治愈
+    - 小清新
+    - 亲子友好
+    - 长者友好
+    - 朋友聚会
+    - 地铁直达
+    - 室内恒温
+    - 低强度轻松
+    popularity:
+    - 小众宝藏
+    - 大学路上的宝藏书店，看书累了还能做个头部SPA，性价比超高。
+    action: []
+  poi_category: 生活服务.书店
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: true
+  parking_available: false
+  sub_facilities:
+  - name: 头部按摩+饮品（60分钟）
+    type: 其他
+    price_per_person: 68
+    suggested_duration_minutes: 60
+    highlight: 头部SPA+咖啡/茶饮，文艺青年最爱
+    child_friendly: true
+    tags:
+      attribute:
+      - 安静治愈
+      - 低强度轻松
+      popularity:
+      - 性价比超高
+      action: []
+  coupons:
+  - title: 首次体验5折
+    platform: dianping
+    original_price: 68
+    coupon_price: 34
+    description: 新客首次体验基础项目享5折
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 大学路夜市
+    cuisine: 夜市小吃
+    price_per_person: 50
+    highlight: 大学路周末夜市，各类小吃应有尽有
+    walking_minutes: 8
+  - name: 肥汁米线
+    cuisine: 云南米线
+    price_per_person: 35
+    highlight: 酸辣开胃，大学生最爱
+    walking_minutes: 10
+- id: act_032
+  name: 上生·新所「路易斯·韦恩」猫猫插画展
+  type: exhibition
+  location:
+    name: 上生·新所
+    address: 上海市长宁区延安西路1262号
+    coordinates:
+      lat: 31.217
+      lng: 121.422
+    district: 长宁区
+  distance_km: 3.0
+  duration_minutes: 90
+  suggested_duration_minutes: 90
+  child_friendly: true
+  group_friendly: true
+  price_per_person: 88
+  queue_minutes: 10
+  reservation_available: true
+  need_booking: false
+  description: 英国画家路易斯·韦恩的猫猫主题插画展，色彩斑斓天马行空，展不大但很出片。逛完旁边就是番禺路咖啡街。
+  tags:
+    attribute:
+    - 猫猫插画
+    - 展览
+    - 文艺
+    - 打卡拍照
+    - 室内
+    - 情侣约会
+    - 朋友聚会
+    - 独自出行
+    - 艺术展
+    - 小清新
+    popularity:
+    - 新展
+    - 上生·新所宝藏展览，猫猫插画治愈又出片。
+    action: []
+  poi_category: 文化艺术.展览
+  elder_friendly: true
+  pet_friendly: false
+  noise_level: low
+  walking_load: low
+  indoor_outdoor: indoor
+  photo_spot: true
+  near_subway: false
+  parking_available: false
+  sub_facilities: []
+  coupons:
+  - title: 双人票
+    platform: dianping
+    original_price: 176
+    coupon_price: 128
+    description: 含双人门票+限定明信片2张
+    valid_until: '2026-06-30'
+  - title: 单人票
+    platform: dianping
+    original_price: 88
+    coupon_price: 68
+    description: 单人观展票，工作日可用
+    valid_until: '2026-06-30'
+  seasonal_events: []
+  nearby_dining:
+  - name: 番禺路咖啡馆
+    cuisine: 咖啡
+    price_per_person: 35
+    highlight: 番禺路咖啡街人气小店，手冲和澳白都不错
+    walking_minutes: 3
+  - name: Manner Coffee（番禺路店）
+    cuisine: 咖啡
+    price_per_person: 25
+    highlight: 番禺路上的Manner，自带杯减5块，逛展后歇脚刚好
+    walking_minutes: 5
+  - name: 番禺路烘焙坊
+    cuisine: 面包烘焙
+    price_per_person: 40
+    highlight: 刚出炉的可颂配猫猫展限定拿铁，可爱满分
+    walking_minutes: 4
+restaurants:
+- id: rest_001
+  name: 鸿姐老火锅
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 鸿姐老火锅
+    address: 上海市黄浦区云南南路118号
+    coordinates:
+      lat: 31.235
+      lng: 121.475
+    district: 人民广场商圈
+  distance_km: 0.8
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 120
+  reservation_available: false
+  need_booking: true
+  description: 正宗重庆老火锅，牛油锅底香辣浓郁，必点招牌嫩牛肉和8秒土豆丝，排队王之一。
+  signature_dishes:
+  - 招牌嫩牛肉
+  - 8秒土豆丝
+  - 手工红糖冰汤圆
+  tags:
+    attribute:
+    - 重庆火锅
+    - 排队王
+    - 牛油锅底
+    - 人民广场
+    - 网红店
+    - 热闹市井
+    - 烟火气
+    - 火锅
+    popularity:
+    - 必吃榜
+    - 排队王
+    - 历史建筑
+    action:
+    - 需预约
+    - 周末排队约120分钟
+  poi_category: 美食.火锅
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 570
+    coupon_price: 410
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 285
+    coupon_price: 213
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 506
+    coupon_price: 270
+    description: 含招牌锅底+3荤3素+饮品，2-3人刚好
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1365
+    coupon_price: 714
+    description: 含双锅底+10荤8素+饮品畅饮，6-8人嗨吃
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行5分钟）
+- id: rest_002
+  name: 捞王锅物料理
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 捞王锅物料理
+    address: 上海市黄浦区南京西路388号仙乐斯广场3楼
+    coordinates:
+      lat: 31.228
+      lng: 121.468
+    district: 人民广场商圈
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 160
+  queue_minutes: 60
+  reservation_available: true
+  need_booking: false
+  description: 胡椒猪肚鸡锅底是招牌，汤底浓郁鲜美，适合带家人来吃，服务贴心。
+  signature_dishes:
+  - 胡椒猪肚鸡锅
+  - 爆浆手打虾丸
+  - 雪花牛肉
+  tags:
+    attribute:
+    - 猪肚鸡
+    - 养生火锅
+    - 适合家庭
+    - 服务好
+    - 人民广场
+    - 安静治愈
+    - 火锅
+    - 亲子友好
+    popularity:
+    - 必吃榜
+    - 排队王
+    - 暖心暖胃的猪肚鸡，老少皆宜。
+    action:
+    - 当日可取号
+    - 周末排队约60分钟
+  poi_category: 美食.火锅
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 608
+    coupon_price: 437
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 304
+    coupon_price: 228
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 540
+    coupon_price: 288
+    description: 含招牌锅底+3荤3素+饮品，2-3人刚好
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 756
+    coupon_price: 392
+    description: 含招牌锅底+5荤4素+儿童小食+饮品，全家吃饱
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1456
+    coupon_price: 761
+    description: 含双锅底+10荤8素+饮品畅饮，6-8人嗨吃
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行8分钟）
+- id: rest_003
+  name: 高老九火锅
+  type: hotpot
+  cuisine_type: 火锅
+  location:
+    name: 高老九火锅
+    address: 上海市黄浦区金陵东路569号汇都国际2楼
+    coordinates:
+      lat: 31.23
+      lng: 121.48
+    district: 人民广场商圈
+  distance_km: 1.0
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 130
+  queue_minutes: 90
+  reservation_available: false
+  need_booking: true
+  description: 重庆风味火锅，九宫格锅底是特色，菜品新鲜量大，性价比高，夜宵好去处。
+  signature_dishes:
+  - 九宫格锅底
+  - 鲜毛肚
+  - 耗儿鱼
+  tags:
+    attribute:
+    - 重庆火锅
+    - 九宫格
+    - 性价比
+    - 人民广场
+    - 夜宵
+    - 热闹市井
+    - 烟火气
+    - 火锅
+    popularity:
+    - 必吃榜
+    - 排队王
+    - 历史建筑
+    action:
+    - 需预约
+    - 周末排队约90分钟
+  poi_category: 美食.火锅
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 494
+    coupon_price: 355
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 247
+    coupon_price: 185
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 438
+    coupon_price: 234
+    description: 含招牌锅底+3荤3素+饮品，2-3人刚好
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1183
+    coupon_price: 618
+    description: 含双锅底+10荤8素+饮品畅饮，6-8人嗨吃
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行5分钟）
+- id: rest_004
+  name: 很久以前羊肉串
+  type: bbq
+  cuisine_type: 烧烤
+  location:
+    name: 很久以前羊肉串
+    address: 上海市浦东新区陆家嘴环路166号
+    coordinates:
+      lat: 31.242
+      lng: 121.503
+    district: 陆家嘴滨江
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 招牌呼伦贝尔羊肉串，每串都来自草原羔羊，肉质鲜嫩多汁，搭配自制蘸料更是一绝。
+  signature_dishes:
+  - 呼伦贝尔羊肉串
+  - 烤鸡翅
+  - 烤馒头片
+  - 烤韭菜
+  tags:
+    attribute:
+    - 羊肉串
+    - 夜宵
+    - 排队王
+    - 陆家嘴
+    - 聚餐
+    - 热闹市井
+    - 烟火气
+    - 烧烤
+    popularity:
+    - 排队王
+    - 陆家嘴人气最旺的羊肉串店，草原直供羊肉，夜宵首选。
+    action:
+    - 周末排队约60分钟
+  poi_category: 美食.烧烤
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 456
+    coupon_price: 328
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 228
+    coupon_price: 171
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 405
+    coupon_price: 216
+    description: 含招牌烤串+小食+饮品，2-3人畅吃
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1092
+    coupon_price: 571
+    description: 含招牌烤串大份+海鲜拼盘+啤酒畅饮，6-8人嗨聚
+    valid_until: '2026-06-30'
+  related_activity_poi: act_012 上海科技馆特展厅（约2km，地铁可达）
+- id: rest_005
+  name: 三兄弟烧烤
+  type: bbq
+  cuisine_type: 烧烤
+  location:
+    name: 三兄弟烧烤
+    address: 上海市浦东新区浦东南路999号
+    coordinates:
+      lat: 31.238
+      lng: 121.498
+    district: 陆家嘴滨江
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 85
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: false
+  description: 老上海风味烧烤，秘制酱料腌制入味，烤串分量足，性价比超高，非常适合朋友聚会。
+  signature_dishes:
+  - 秘制烤牛肉串
+  - 烤生蚝
+  - 烤茄子
+  - 烤年糕
+  tags:
+    attribute:
+    - 老字号
+    - 平价
+    - 聚餐
+    - 陆家嘴
+    - 生蚝
+    - 安静治愈
+    - 亲子友好
+    - 烧烤
+    popularity:
+    - 排队王
+    - 历史建筑
+    - 陆家嘴性价比之王，老上海味道，适合带家人一起撸串。
+    action:
+    - 当日可取号
+  poi_category: 美食.烧烤
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 323
+    coupon_price: 232
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 161
+    coupon_price: 120
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 单人体验套餐
+    platform: meituan
+    original_price: 110
+    coupon_price: 55
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 286
+    coupon_price: 153
+    description: 含招牌烤串+小食+饮品，2-3人畅吃
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 401
+    coupon_price: 208
+    description: 含招牌烤串+儿童套餐+小食+饮品，全家撸串
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 773
+    coupon_price: 404
+    description: 含招牌烤串大份+海鲜拼盘+啤酒畅饮，6-8人嗨聚
+    valid_until: '2026-06-30'
+  related_activity_poi: act_010 世纪公园当代艺术馆（约2km，地铁可达）
+- id: rest_006
+  name: 炙壹·炉端烧
+  type: japanese
+  cuisine_type: 日料
+  location:
+    name: 炙壹·炉端烧
+    address: 上海市闵行区申长路688号虹桥天地北区B1-06
+    coordinates:
+      lat: 31.206
+      lng: 121.376
+    district: 虹桥天地周边
+  distance_km: 0.3
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 280
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: true
+  description: 主打炉端烧和活海鲜，明火炭烤，新鲜看得见。必点北海道金吉鱼和澳洲M9和牛。
+  signature_dishes:
+  - 北海道金吉鱼
+  - 澳洲M9和牛
+  - 蟹味增甲罗烧
+  - 明太子山药
+  tags:
+    attribute:
+    - 炉端烧
+    - 海鲜
+    - 日式烧烤
+    - 虹桥天地
+    - 商务宴请
+    - 安静治愈
+    - 禅意雅致
+    - 有包间
+    - 日料
+    popularity:
+    - 大众点评4.8分
+    - 虹桥天地人气日料，炉端烧专营，海鲜和牛品质出众。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.日料
+  coupons:
+  - title: 双人Omakase体验
+    platform: dianping
+    original_price: 504
+    coupon_price: 352
+    description: 含前菜+刺身+寿司+甜品
+    valid_until: '2026-07-15'
+  - title: 2-3人品鲜套餐
+    platform: meituan
+    original_price: 910
+    coupon_price: 489
+    description: 含刺身拼盘+寿司+小食+饮品
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 2450
+    coupon_price: 1372
+    description: 含招牌菜+主食+饮品畅饮，6-8人聚会
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 700
+    coupon_price: 392
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  - title: 单人Omakase体验
+    platform: dianping
+    original_price: 364
+    coupon_price: 201
+    description: 含前菜+刺身+寿司+甜品，一人食也精致
+    valid_until: '2026-06-30'
+  related_activity_poi: act_016 上海儿童博物馆（约2km，地铁可达）
+- id: rest_007
+  name: 鮨匠·寿司
+  type: japanese
+  cuisine_type: 日料
+  location:
+    name: 鮨匠·寿司
+    address: 上海市闵行区申滨南路998号龙湖天街B1-22
+    coordinates:
+      lat: 31.202
+      lng: 121.372
+    district: 虹桥天地周边
+  distance_km: 0.6
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 180
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 高性价比江户前寿司，食材每日空运。推荐鹅肝寿司和星鳗寿司，入口即化。
+  signature_dishes:
+  - 鹅肝寿司
+  - 星鳗寿司
+  - 三文鱼腩刺身
+  - 海鲜丼
+  tags:
+    attribute:
+    - 寿司
+    - 刺身
+    - 虹桥天地
+    - 平日晚餐
+    - 一人食
+    - 安静治愈
+    - 开放式
+    - 一人食友好
+    - 日料
+    - 亲子友好
+    popularity:
+    - 大众点评4.8分
+    - 虹桥天街性价比寿司店，食材新鲜，口味地道。
+    action: []
+  poi_category: 美食.日料
+  coupons:
+  - title: 双人Omakase体验
+    platform: dianping
+    original_price: 324
+    coupon_price: 226
+    description: 含前菜+刺身+寿司+甜品
+    valid_until: '2026-07-15'
+  - title: 单人体验套餐
+    platform: meituan
+    original_price: 234
+    coupon_price: 117
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 819
+    coupon_price: 441
+    description: 含招牌菜+主食+饮品，适合3-4人家庭
+    valid_until: '2026-06-30'
+  - title: 单人Omakase体验
+    platform: dianping
+    original_price: 234
+    coupon_price: 129
+    description: 含前菜+刺身+寿司+甜品，一人食也精致
+    valid_until: '2026-06-30'
+  related_activity_poi: act_028 芮欧百货手工坊（约2km，地铁可达）
+- id: rest_008
+  name: 新荣记(北外滩店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 新荣记(北外滩店)
+    address: 上海市虹口区东大名路501号白玉兰广场3楼
+    coordinates:
+      lat: 31.252
+      lng: 121.495
+    district: 北外滩滨水区
+  distance_km: 0.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 600
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 台州海鲜粤菜标杆，必点家烧黄鱼、脆皮乳鸽，环境雅致适合商务宴请。
+  signature_dishes:
+  - 家烧黄鱼
+  - 脆皮乳鸽
+  - 和牛蛋挞
+  tags:
+    attribute:
+    - 米其林
+    - 海鲜
+    - 粤菜
+    - 商务宴请
+    - 北外滩
+    - 禅意雅致
+    - 江景/景观
+    - 粤菜/本帮菜
+    - 亲子友好
+    popularity:
+    - 本帮菜标杆
+    - 必吃榜
+    - 北外滩江景粤菜，米其林品质稳如泰山。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.粤菜/本帮菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 2280
+    coupon_price: 1641
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 2-3人品鉴套餐
+    platform: meituan
+    original_price: 1950
+    coupon_price: 1080
+    description: 含招牌菜3道+主食+饮品，精致小聚
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 2730
+    coupon_price: 1470
+    description: 含招牌菜4道+主食+儿童餐+饮品，老少皆宜
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 5250
+    coupon_price: 2856
+    description: 含招牌菜6道+主食+饮品，圆桌聚会
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 1500
+    coupon_price: 840
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_004 世茂广场（约2km，地铁可达）
+- id: rest_009
+  name: 老吉士(北外滩来福士店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 老吉士(北外滩来福士店)
+    address: 上海市虹口区东大名路999号北外滩来福士广场B1层
+    coordinates:
+      lat: 31.254
+      lng: 121.498
+    district: 北外滩滨水区
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 本帮菜经典老店，红烧肉、蟹粉豆腐必点，浓油赤酱正宗上海味道。
+  signature_dishes:
+  - 红烧肉
+  - 蟹粉豆腐
+  - 油爆虾
+  tags:
+    attribute:
+    - 本帮菜
+    - 老字号
+    - 浓油赤酱
+    - 排队王
+    - 北外滩
+    - 文艺复古
+    - 热闹市井
+    - 粤菜/本帮菜
+    - 亲子友好
+    popularity:
+    - 本帮菜标杆
+    - 必吃榜
+    - 排队王
+    - 历史建筑
+    action:
+    - 周末排队约60分钟
+  poi_category: 美食.粤菜/本帮菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 570
+    coupon_price: 410
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 285
+    coupon_price: 213
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人品鉴套餐
+    platform: meituan
+    original_price: 487
+    coupon_price: 270
+    description: 含招牌菜3道+主食+饮品，精致小聚
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 682
+    coupon_price: 367
+    description: 含招牌菜4道+主食+儿童餐+饮品，老少皆宜
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1312
+    coupon_price: 714
+    description: 含招牌菜6道+主食+饮品，圆桌聚会
+    valid_until: '2026-06-30'
+  related_activity_poi: act_005 香港名都（约2km，地铁可达）
+- id: rest_010
+  name: 点都德(北外滩店)
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 点都德(北外滩店)
+    address: 上海市虹口区东大名路1089号北外滩来福士广场4层
+    coordinates:
+      lat: 31.255
+      lng: 121.497
+    district: 北外滩滨水区
+  distance_km: 1.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: false
+  description: 广州老字号早茶，金沙红米肠、虾饺皇人气爆棚，全天候茶市。
+  signature_dishes:
+  - 金沙红米肠
+  - 虾饺皇
+  - 蒸凤爪
+  tags:
+    attribute:
+    - 粤式点心
+    - 早茶
+    - 老字号
+    - 北外滩
+    - 家庭聚餐
+    - 热闹市井
+    - 文艺复古
+    - 粤菜/本帮菜
+    - 亲子友好
+    popularity:
+    - 本帮菜标杆
+    - 必吃榜
+    - 历史建筑
+    action:
+    - 当日可取号
+  poi_category: 美食.粤菜/本帮菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 456
+    coupon_price: 328
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 228
+    coupon_price: 171
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人品鉴套餐
+    platform: meituan
+    original_price: 390
+    coupon_price: 216
+    description: 含招牌菜3道+主食+饮品，精致小聚
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 546
+    coupon_price: 294
+    description: 含招牌菜4道+主食+儿童餐+饮品，老少皆宜
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1050
+    coupon_price: 571
+    description: 含招牌菜6道+主食+饮品，圆桌聚会
+    valid_until: '2026-06-30'
+  related_activity_poi: act_003 第一百货商业中心（约2km，地铁可达）
+- id: rest_011
+  name: Le Comptoir de Pierre Gagnaire
+  type: western
+  cuisine_type: 西餐
+  location:
+    name: Le Comptoir de Pierre Gagnaire
+    address: 上海市黄浦区太仓路181弄新天地北里18号
+    coordinates:
+      lat: 31.217
+      lng: 121.474
+    district: 新天地周边
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 1200
+  queue_minutes: 0
+  reservation_available: true
+  need_booking: true
+  description: 法国名厨Pierre Gagnaire的上海分店，经典法式料理，招牌油封鸭腿和黑松露意面，环境优雅。
+  signature_dishes:
+  - 油封鸭腿
+  - 黑松露意面
+  - 烤羊排
+  tags:
+    attribute:
+    - 法式
+    - 高端
+    - 约会圣地
+    - 新天地
+    - 米其林
+    - 浪漫
+    - 禅意雅致
+    - 安静治愈
+    - 西餐
+    popularity:
+    - 米其林
+    - 新天地法餐标杆，米其林品质，约会首选。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.西餐
+  coupons:
+  - title: 双人品鉴晚餐
+    platform: dianping
+    original_price: 2160
+    coupon_price: 1560
+    description: 含前菜+主菜+甜品+配酒
+    valid_until: '2026-07-15'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 3900
+    coupon_price: 2250
+    description: 含主菜+前菜+甜品+饮品
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 10500
+    coupon_price: 5880
+    description: 含主菜+前菜拼盘+甜品+饮品，长桌聚会
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 3000
+    coupon_price: 1680
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_023 星聚会KTV（新天地店）（步行5分钟）
+- id: rest_012
+  name: Polux by Paul Pairet
+  type: western
+  cuisine_type: 西餐
+  location:
+    name: Polux by Paul Pairet
+    address: 上海市黄浦区太仓路181弄新天地北里17号
+    coordinates:
+      lat: 31.218
+      lng: 121.473
+    district: 新天地周边
+  distance_km: 0.3
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 400
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: false
+  description: Paul Pairet打造的轻松法式小馆，招牌脆皮猪排和土豆泥，性价比超高，适合朋友聚餐。
+  signature_dishes:
+  - 脆皮猪排
+  - 土豆泥
+  - 法式吐司
+  tags:
+    attribute:
+    - 法式
+    - 小馆
+    - 平价
+    - 新天地
+    - 网红
+    - 安静治愈
+    - 热闹市井
+    - 西餐
+    - 亲子友好
+    popularity:
+    - 米其林
+    - 必吃榜
+    - Paul Pairet的平价法餐，轻松氛围，必吃脆皮猪排。
+    action:
+    - 当日可取号
+    - 需预约
+  poi_category: 美食.西餐
+  coupons:
+  - title: 双人法式晚餐
+    platform: meituan
+    original_price: 720
+    coupon_price: 576
+    description: 含主菜+甜品+饮品
+    valid_until: '2026-06-30'
+  - title: 单人体验套餐
+    platform: meituan
+    original_price: 520
+    coupon_price: 260
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 1300
+    coupon_price: 750
+    description: 含主菜+前菜+甜品+饮品
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 1820
+    coupon_price: 979
+    description: 含招牌菜+主食+饮品，适合3-4人家庭
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 3500
+    coupon_price: 1959
+    description: 含主菜+前菜拼盘+甜品+饮品，长桌聚会
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 1000
+    coupon_price: 560
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_023 星聚会KTV（新天地店）（步行5分钟）
+- id: rest_013
+  name: 永平里
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 永平里
+    address: 上海市黄浦区巨鹿路158号
+    coordinates:
+      lat: 31.225
+      lng: 121.46
+    district: 人民广场商圈
+  distance_km: 1.5
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 65
+  queue_minutes: 10
+  reservation_available: false
+  need_booking: false
+  description: 藏在弄堂里的ins风咖啡店，主打手冲和创意甜品，巴斯克蛋糕必点
+  signature_dishes:
+  - 巴斯克芝士蛋糕
+  - dirty咖啡
+  - 提拉米苏
+  tags:
+    attribute:
+    - 网红打卡
+    - 手冲咖啡
+    - 弄堂小店
+    - 甜品
+    - 拍照圣地
+    - 文艺复古
+    - 安静治愈
+    - 咖啡/茶馆/甜品
+    - 亲子友好
+    popularity:
+    - 网红打卡
+    - 出片率最高
+    - 巨鹿路上最出片的咖啡店，巴斯克蛋糕上海前三
+    action:
+    - 需预约
+  poi_category: 美食.咖啡/茶馆/甜品
+  coupons:
+  - title: 双人下午茶套餐
+    platform: meituan
+    original_price: 143
+    coupon_price: 88
+    description: 含2杯饮品+2份甜品
+    valid_until: '2026-06-30'
+  - title: 单人下午茶套餐
+    platform: meituan
+    original_price: 84
+    coupon_price: 42
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行8分钟）
+- id: rest_014
+  name: 汴京茶寮
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 汴京茶寮
+    address: 上海市黄浦区福州路390号
+    coordinates:
+      lat: 31.233
+      lng: 121.478
+    district: 人民广场商圈
+  distance_km: 0.8
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 45
+  queue_minutes: 20
+  reservation_available: false
+  need_booking: false
+  description: 日式庭院风茶馆，招牌抹茶拿铁和铜锣烧，适合闺蜜小聚
+  signature_dishes:
+  - 抹茶拿铁
+  - 铜锣烧
+  - 抹茶千层
+  tags:
+    attribute:
+    - 日式茶馆
+    - 抹茶控
+    - 人民广场
+    - 下午茶
+    - 日系
+    - 禅意雅致
+    - 安静治愈
+    - 咖啡/茶馆/甜品
+    popularity:
+    - 网红打卡
+    - 出片率最高
+    - 人民广场闹中取静的日式茶馆，抹茶系列一绝
+    action:
+    - 需预约
+  poi_category: 美食.咖啡/茶馆/甜品
+  coupons:
+  - title: 双人下午茶套餐
+    platform: meituan
+    original_price: 99
+    coupon_price: 61
+    description: 含2杯饮品+2份甜品
+    valid_until: '2026-06-30'
+  - title: 单人下午茶套餐
+    platform: meituan
+    original_price: 58
+    coupon_price: 29
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 112
+    coupon_price: 62
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行10分钟）
+- id: rest_015
+  name: 柴爿巷
+  type: cafe_dessert
+  cuisine_type: 咖啡/茶馆/甜品
+  location:
+    name: 柴爿巷
+    address: 上海市黄浦区淮海东路45号
+    coordinates:
+      lat: 31.226
+      lng: 121.485
+    district: 人民广场商圈
+  distance_km: 2.1
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 38
+  queue_minutes: 5
+  reservation_available: false
+  need_booking: false
+  description: 老上海石库门风格甜品店，手工冰粉和酒酿圆子超地道，夏天必吃
+  signature_dishes:
+  - 红糖冰粉
+  - 酒酿圆子
+  - 绿豆汤
+  tags:
+    attribute:
+    - 老上海
+    - 冰粉
+    - 石库门
+    - 弄堂美食
+    - 平价
+    - 文艺复古
+    - 烟火气
+    - 咖啡/茶馆/甜品
+    - 亲子友好
+    popularity:
+    - 网红打卡
+    - 出片率最高
+    - 排队王
+    - 历史建筑
+    - 石库门建筑
+    action: []
+  poi_category: 美食.咖啡/茶馆/甜品
+  coupons:
+  - title: 双人下午茶套餐
+    platform: meituan
+    original_price: 83
+    coupon_price: 51
+    description: 含2杯饮品+2份甜品
+    valid_until: '2026-06-30'
+  - title: 单人下午茶套餐
+    platform: meituan
+    original_price: 49
+    coupon_price: 24
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（步行5分钟）
+- id: rest_016
+  name: 绿野轻食
+  type: light_meal
+  cuisine_type: 轻食/健康餐
+  location:
+    name: 绿野轻食
+    address: 上海市浦东新区陆家嘴环路123号
+    coordinates:
+      lat: 31.241
+      lng: 121.503
+    district: 陆家嘴滨江
+  distance_km: 0.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: false
+  price_per_person: 68
+  queue_minutes: 15
+  reservation_available: true
+  need_booking: false
+  description: 陆家嘴白领的轻食天堂，主打有机蔬菜碗和藜麦沙拉，牛油果三明治是必点。
+  signature_dishes:
+  - 牛油果三明治
+  - 藜麦鸡肉沙拉
+  - 奇亚籽酸奶碗
+  tags:
+    attribute:
+    - 轻食
+    - 健康餐
+    - 沙拉
+    - 白领午餐
+    - 有机
+    - 小清新
+    - 安静治愈
+    - 轻食/健康餐
+    - 亲子友好
+    popularity:
+    - 减脂友好
+    - 陆家嘴性价比最高的健康轻食，食材新鲜，适合减脂期。
+    action:
+    - 当日可取号
+  poi_category: 美食.轻食/健康餐
+  coupons:
+  - title: 双人轻食套餐
+    platform: meituan
+    original_price: 149
+    coupon_price: 97
+    description: 含2份主菜+2杯饮品
+    valid_until: '2026-06-30'
+  - title: 单人轻食套餐
+    platform: meituan
+    original_price: 88
+    coupon_price: 44
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  related_activity_poi: act_012 上海科技馆特展厅（约2km，地铁可达）
+- id: rest_017
+  name: 麦田素语
+  type: light_meal
+  cuisine_type: 轻食/健康餐
+  location:
+    name: 麦田素语
+    address: 上海市浦东新区滨江大道456号
+    coordinates:
+      lat: 31.245
+      lng: 121.507
+    district: 陆家嘴滨江
+  distance_km: 1.2
+  child_friendly: false
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 95
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 滨江景观素食餐厅，创意料理颜值高，黑松露炒饭和甜菜根拿铁人气爆棚。
+  signature_dishes:
+  - 黑松露炒饭
+  - 甜菜根拿铁
+  - 紫薯燕麦碗
+  tags:
+    attribute:
+    - 素食
+    - 健康餐
+    - 景观餐厅
+    - 创意料理
+    - 轻食
+    - 文艺复古
+    - 浪漫
+    - 江景/景观
+    - 轻食/健康餐
+    popularity:
+    - 减脂友好
+    - 网红打卡
+    - 边看江景边吃健康素食，拍照打卡超出片。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.轻食/健康餐
+  coupons:
+  - title: 双人轻食套餐
+    platform: meituan
+    original_price: 209
+    coupon_price: 136
+    description: 含2份主菜+2杯饮品
+    valid_until: '2026-06-30'
+  - title: 单人轻食套餐
+    platform: meituan
+    original_price: 123
+    coupon_price: 61
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 308
+    coupon_price: 154
+    description: 含招牌菜+饮品+主食，2-3人小聚
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 237
+    coupon_price: 133
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_012 上海科技馆特展厅（约2km，地铁可达）
+- id: rest_018
+  name: 红盔甲·小龙虾烧烤夜宵
+  type: street_food
+  cuisine_type: 小吃/夜宵
+  location:
+    name: 红盔甲·小龙虾烧烤夜宵
+    address: 上海市闵行区申长路888号虹桥天地B1层
+    coordinates:
+      lat: 31.208
+      lng: 121.378
+    district: 虹桥天地周边
+  distance_km: 0.5
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: true
+  need_booking: true
+  description: 上海小龙虾界扛把子，推荐冰镇龙虾和秘制十三香，夜宵时段人气爆棚。
+  signature_dishes:
+  - 冰镇小龙虾
+  - 秘制十三香龙虾
+  - 蒜蓉烤生蚝
+  tags:
+    attribute:
+    - 小龙虾
+    - 夜宵
+    - 烧烤
+    - 虹桥天地
+    - 排队王
+    - 热闹市井
+    - 烟火气
+    - 小吃/夜宵
+    popularity:
+    - 夜宵必吃
+    - 排队王
+    - 必吃榜
+    action:
+    - 需预约
+    - 当日可取号
+    - 周末排队约60分钟
+  poi_category: 美食.小吃/夜宵
+  coupons:
+  - title: 双人夜宵套餐
+    platform: meituan
+    original_price: 330
+    coupon_price: 210
+    description: 含招牌菜+饮品+小食
+    valid_until: '2026-06-30'
+  - title: 单人夜宵套餐
+    platform: meituan
+    original_price: 195
+    coupon_price: 97
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 487
+    coupon_price: 243
+    description: 含招牌菜+饮品+主食，2-3人小聚
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1365
+    coupon_price: 714
+    description: 含招牌菜大份+小食拼盘+饮品，6-8人夜宵局
+    valid_until: '2026-06-30'
+  related_activity_poi: act_014 上海自然博物馆（约2km，地铁可达）
+- id: rest_019
+  name: 平成屋·日式串烧居酒屋
+  type: street_food
+  cuisine_type: 小吃/夜宵
+  location:
+    name: 平成屋·日式串烧居酒屋
+    address: 上海市闵行区申滨南路999号龙湖天街B1层
+    coordinates:
+      lat: 31.202
+      lng: 121.372
+    district: 虹桥天地周边
+  distance_km: 0.8
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 120
+  queue_minutes: 30
+  reservation_available: false
+  need_booking: false
+  description: 日式居酒屋氛围，烤串和梅酒是招牌，深夜食堂即视感。
+  signature_dishes:
+  - 烤鸡肉串
+  - 烤牛舌
+  - 梅酒
+  - 日式炒乌冬
+  tags:
+    attribute:
+    - 日式
+    - 串烧
+    - 居酒屋
+    - 夜宵
+    - 虹桥
+    - 安静治愈
+    - 小吃/夜宵
+    - 亲子友好
+    popularity:
+    - 夜宵必吃
+    - 排队王
+    - 正宗日式串烧，下班后小酌一杯的好去处。
+    action:
+    - 需预约
+  poi_category: 美食.小吃/夜宵
+  coupons:
+  - title: 双人夜宵套餐
+    platform: meituan
+    original_price: 264
+    coupon_price: 168
+    description: 含招牌菜+饮品+小食
+    valid_until: '2026-06-30'
+  - title: 单人夜宵套餐
+    platform: meituan
+    original_price: 156
+    coupon_price: 78
+    description: 含1份主菜+1杯饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 390
+    coupon_price: 195
+    description: 含招牌菜+饮品+主食，2-3人小聚
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 546
+    coupon_price: 294
+    description: 含招牌菜+主食+饮品，适合3-4人家庭
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1092
+    coupon_price: 571
+    description: 含招牌菜大份+小食拼盘+饮品，6-8人夜宵局
+    valid_until: '2026-06-30'
+  related_activity_poi: act_016 上海儿童博物馆（约2km，地铁可达）
+- id: rest_020
+  name: 泰廊
+  type: exotic
+  cuisine_type: 东南亚
+  location:
+    name: 泰廊
+    address: 上海市虹口区东大名路501号北外滩来福士3楼
+    coordinates:
+      lat: 31.254
+      lng: 121.498
+    district: 北外滩滨水区
+  distance_km: 1.2
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 180
+  queue_minutes: 45
+  reservation_available: true
+  need_booking: true
+  description: 正宗泰国菜，冬阴功汤浓郁，咖喱蟹必点，环境优雅适合聚餐。
+  signature_dishes:
+  - 冬阴功汤
+  - 咖喱蟹
+  - 芒果糯米饭
+  - 泰式奶茶
+  tags:
+    attribute:
+    - 泰国菜
+    - 北外滩
+    - 聚餐
+    - 咖喱
+    - 网红
+    - 禅意雅致
+    - 热闹市井
+    - 东南亚/韩料/特色菜
+    - 亲子友好
+    popularity:
+    - 排队王
+    - 北外滩正宗泰式风味，咖喱蟹一绝。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.东南亚/韩料/特色菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 684
+    coupon_price: 492
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 342
+    coupon_price: 256
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 585
+    coupon_price: 324
+    description: 含招牌菜+主食+饮品，2-3人尝鲜刚好
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 819
+    coupon_price: 441
+    description: 含招牌菜+主食+儿童份+饮品，全家共享
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1575
+    coupon_price: 856
+    description: 含招牌菜大份+主食+饮品畅饮，6-8人欢聚
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 450
+    coupon_price: 251
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_001 来福士广场（约2km，地铁可达）
+- id: rest_021
+  name: 姜虎东白丁烤肉
+  type: exotic
+  cuisine_type: 韩料
+  location:
+    name: 姜虎东白丁烤肉
+    address: 上海市虹口区公平路18号北外滩来福士B1
+    coordinates:
+      lat: 31.253
+      lng: 121.496
+    district: 北外滩滨水区
+  distance_km: 1.0
+  child_friendly: false
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 150
+  queue_minutes: 60
+  reservation_available: false
+  need_booking: false
+  description: 韩式烤肉人气店，厚切五花肉配烧酒，小菜无限续，氛围热闹。
+  signature_dishes:
+  - 厚切五花肉
+  - 调味牛排
+  - 回忆盒饭
+  - 大酱汤
+  tags:
+    attribute:
+    - 韩式烤肉
+    - 北外滩
+    - 排队王
+    - 五花肉
+    - 小菜
+    - 热闹市井
+    - 烟火气
+    - 东南亚/韩料/特色菜
+    popularity:
+    - 排队王
+    - 北外滩韩式烤肉顶流，五花肉配烧酒绝配。
+    action:
+    - 周末排队约60分钟
+  poi_category: 美食.东南亚/韩料/特色菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 570
+    coupon_price: 410
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 双人套餐
+    platform: dianping
+    original_price: 285
+    coupon_price: 213
+    description: 含2份招牌菜+饮品
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 487
+    coupon_price: 270
+    description: 含招牌菜+主食+饮品，2-3人尝鲜刚好
+    valid_until: '2026-06-30'
+  related_activity_poi: act_004 世茂广场（约2km，地铁可达）
+- id: rest_022
+  name: 蟹尊苑
+  type: exotic
+  cuisine_type: 特色菜
+  location:
+    name: 蟹尊苑
+    address: 上海市虹口区东长治路588号北外滩来福士5楼
+    coordinates:
+      lat: 31.255
+      lng: 121.497
+    district: 北外滩滨水区
+  distance_km: 1.3
+  child_friendly: true
+  diet_friendly: false
+  group_friendly: true
+  price_per_person: 300
+  queue_minutes: 30
+  reservation_available: true
+  need_booking: true
+  description: 上海蟹宴名店，蟹粉拌面鲜掉眉毛，蟹黄小笼包一绝，适合宴请。
+  signature_dishes:
+  - 蟹粉拌面
+  - 蟹黄小笼包
+  - 醉蟹
+  - 蟹粉豆腐
+  tags:
+    attribute:
+    - 蟹宴
+    - 北外滩
+    - 高档
+    - 上海特色
+    - 宴请
+    - 禅意雅致
+    - 东南亚/韩料/特色菜
+    - 亲子友好
+    popularity:
+    - 排队王
+    - 北外滩品蟹首选，蟹粉拌面鲜香浓郁。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.东南亚/韩料/特色菜
+  coupons:
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 1140
+    coupon_price: 820
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 2-3人小聚套餐
+    platform: meituan
+    original_price: 975
+    coupon_price: 540
+    description: 含招牌菜+主食+饮品，2-3人尝鲜刚好
+    valid_until: '2026-06-30'
+  - title: 3-4人家庭套餐
+    platform: meituan
+    original_price: 1365
+    coupon_price: 735
+    description: 含招牌菜+主食+儿童份+饮品，全家共享
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 2625
+    coupon_price: 1428
+    description: 含招牌菜大份+主食+饮品畅饮，6-8人欢聚
+    valid_until: '2026-06-30'
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 750
+    coupon_price: 420
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  related_activity_poi: act_003 第一百货商业中心（约2km，地铁可达）
+- id: rest_023
+  name: 武康公馆·粤味
+  type: cantonese
+  cuisine_type: 粤菜/本帮菜
+  location:
+    name: 武康公馆·粤味
+    address: 上海市徐汇区武康路378号
+    coordinates:
+      lat: 31.207
+      lng: 121.439
+    district: 武康路衡复街区
+  distance_km: 2.5
+  child_friendly: true
+  diet_friendly: true
+  group_friendly: true
+  price_per_person: 200
+  queue_minutes: 20
+  reservation_available: true
+  need_booking: true
+  description: 武康路新晋黑珍珠粤菜馆，老洋房里的精致粤味。招牌玻璃脆皮乳鸽、黑松露虾饺皇，环境雅致适合约会和宴请。
+  signature_dishes:
+  - 玻璃脆皮乳鸽
+  - 黑松露虾饺皇
+  - 鲍汁扣花胶
+  - 杨枝甘露
+  tags:
+    attribute:
+    - 黑珍珠
+    - 粤菜
+    - 武康路
+    - 老洋房
+    - 约会圣地
+    - 浪漫
+    - 禅意雅致
+    - 情侣约会
+    - 朋友聚会
+    - 网红店
+    popularity:
+    - 黑珍珠上榜
+    - 必吃榜
+    - 武康路新晋黑珍珠，老洋房里吃粤菜仪式感拉满。
+    action:
+    - 需预约
+    - 当日可取号
+  poi_category: 美食.粤菜/本帮菜
+  coupons:
+  - title: 浪漫约会双人套餐
+    platform: dianping
+    original_price: 500
+    coupon_price: 280
+    description: 含双人招牌菜+甜品+配饮，氛围满分
+    valid_until: '2026-06-30'
+  - title: 2-3人品鉴套餐
+    platform: meituan
+    original_price: 650
+    coupon_price: 360
+    description: 含招牌菜3道+主食+饮品，精致小聚
+    valid_until: '2026-06-30'
+  - title: 4人聚会套餐
+    platform: meituan
+    original_price: 1140
+    coupon_price: 820
+    description: 含招牌菜+饮品+主食，适合4人聚餐
+    valid_until: '2026-06-30'
+  - title: 6-8人聚会套餐
+    platform: meituan
+    original_price: 1750
+    coupon_price: 952
+    description: 含招牌菜6道+主食+饮品，圆桌聚会
+    valid_until: '2026-06-30'
+  related_activity_poi: act_022 武康路光影艺术影院（步行2分钟）
