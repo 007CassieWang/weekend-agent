@@ -1108,10 +1108,15 @@ def parse_request_mock(user_input: str) -> Dict[str, Any]:
         result["companions"] = "solo"
         result["people_count"] = 1
 
-    # 提取具体人数
+    # 提取具体人数（支持 "3个人"、"3-5人"、"3-4个人" 等多种格式）
     match = re.search(r'(\d+)\s*个?人', user_input)
     if match:
         result["people_count"] = int(match.group(1))
+    # 范围格式 "3-5人" → 取中间值 4；"6-8人" → 取中间值 7
+    range_match = re.search(r'(\d+)\s*[~\-]\s*(\d+)\s*人', user_input)
+    if range_match:
+        lo, hi = int(range_match.group(1)), int(range_match.group(2))
+        result["people_count"] = (lo + hi) // 2  # 取中间值作为搜索参数
 
     # 提取儿童年龄
     match = re.search(r'(\d+)\s*岁', user_input)

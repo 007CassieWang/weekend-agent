@@ -1184,6 +1184,197 @@ def classify_modification(text: str) -> str:
     return "minor_constraint"
 
 
+# ==================== 修改意图解析（槽位更新） ====================
+
+def parse_modification_slots(text: str, existing_slots: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    从用户修改文本中提取结构化的槽位更新。
+
+    当用户在会话中手动输入"改成3个人""预算降一档""换吃日料"等文字时，
+    解析具体意图并返回需要更新的槽位键值对，使最终方案与用户意图高度一致。
+
+    Args:
+        text: 用户输入的修改文本
+        existing_slots: 当前已有的槽位（用于判断是否有变化）
+
+    Returns:
+        {
+            "updated_slots": {slot_name: new_value, ...},  # 本次要更新的槽位
+            "mod_type": "minor_constraint"|"direction_change"|"major_change",
+            "parsed_intent": "修改了什么的人类可读说明",
+        }
+    """
+    existing = existing_slots or {}
+    text_lower = text.lower()
+    updated: Dict[str, Any] = {}
+    intents: List[str] = []
+
+    # ── 人数 ──
+    people_match = re.search(r'(\d+)\s*个?\s*人', text)
+    if people_match:
+        new_count = int(people_match.group(1))
+        old_count = existing.get("people_count")
+        if old_count != new_count:
+            updated["people_count"] = new_count
+            intents.append(f"人数 → {new_count}人")
+    elif re.search(r'多加[一俩两三四五六七八九]|[一俩两三四五六七八九]\s*个?\s*人', text):
+        # "多一个人"、"再加两人"
+        num_map = {"一": 1, "俩": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8}
+        for cn, num in num_map.items():
+            if re.search(rf'多加{cn}|再加{cn}|{cn}\s*个?\s*人', text):
+                old = existing.get("people_count", 0) or 0
+                new_count = old + num
+                updated["people_count"] = new_count
+                intents.append(f"人数 +{num} → {new_count}人")
+                break
+    elif re.search(r'少[一俩两]个?\s*人|减[一俩两]个?\s*人', text):
+        num_map = {"一": 1, "俩": 2, "两": 2}
+        for cn, num in num_map.items():
+            if re.search(rf'少{cn}|减{cn}', text):
+                old = existing.get("people_count", 0) or 0
+                new_count = max(1, old - num)
+                updated["people_count"] = new_count
+                intents.append(f"人数 -{num} → {new_count}人")
+                break
+
+    # ── 预算 ──
+    if re.search(r'便宜|实惠|省钱|人均\s*100|100\s*以内|经济|预算低|低预算|预算别太|不要太贵|别太贵|低一点|预算低一点|省点|节省', text_lower):
+        if existing.get("budget") != "low" and existing.get("budget_level") != "low":
+            updated["budget"] = "low"
+            updated["budget_level"] = "low"
+            intents.append("预算 → 经济实惠")
+    elif re.search(r'预算[高中]|贵点|高端|精致|人均\s*[3-9]\d\d|预算充足|档次高|升级|预算高|高一点|预算高一|升一档|加点预算|吃好一点|吃好点', text_lower):
+        if existing.get("budget") != "high" and existing.get("budget_level") != "high":
+            updated["budget"] = "high"
+            updated["budget_level"] = "high"
+            intents.append("预算 → 高")
+    elif re.search(r'人均\s*[1-2]\d\d|中等|预算中|正常', text_lower):
+        if existing.get("budget") != "medium":
+            updated["budget"] = "medium"
+            updated["budget_level"] = "medium"
+            intents.append("预算 → 中等")
+
+    # ── 菜系/饮食偏好 ──
+    cuisine_map = {
+        "火锅": "hotpot", "日料": "japanese", "日式": "japanese", "寿司": "japanese",
+        "粤菜": "cantonese", "本帮菜": "cantonese", "西餐": "western", "牛排": "western",
+        "烧烤": "bbq", "撸串": "bbq", "韩料": "korean", "韩国": "korean",
+        "泰国": "thai", "东南亚": "thai", "轻食": "healthy", "健康餐": "healthy",
+        "小吃": "street_food", "咖啡": "cafe", "甜品": "cafe", "下午茶": "cafe",
+        "中餐": "chinese",
+    }
+    for kw, cv in cuisine_map.items():
+        if re.search(rf'吃{kw}|换{kw}|改成{kw}|要{kw}|想.*{kw}', text_lower):
+            if existing.get("cuisine_type") != cv and existing.get("food_preference") != cv:
+                updated["cuisine_type"] = cv
+                updated["food_preference"] = cv
+                intents.append(f"菜系 → {kw}")
+                break
+
+    # ── 距离/车程 ──
+    distance_match = re.search(r'(\d+)\s*分钟', text)
+    if distance_match:
+        new_dist = int(distance_match.group(1))
+        updated["max_travel_time"] = new_dist
+        intents.append(f"车程 → {new_dist}分钟")
+    if re.search(r'附近|离家近|不要太远|不远|近一点|近些', text_lower):
+        updated["travel_radius"] = "short"
+        intents.append("距离 → 近")
+    elif re.search(r'远点|远一些|远一点|出去', text_lower):
+        updated["travel_radius"] = "far"
+        intents.append("距离 → 远")
+
+    # ── 氛围 ──
+    if re.search(r'安静|清静|不要太吵|安静点|安静些', text_lower):
+        updated["atmosphere"] = "quiet"
+        intents.append("氛围 → 安静")
+    elif re.search(r'热闹|气氛好|嗨|人多|热闹点', text_lower):
+        updated["atmosphere"] = "lively"
+        intents.append("氛围 → 热闹")
+    elif re.search(r'浪漫|仪式感|有情调', text_lower):
+        updated["atmosphere"] = "romantic"
+        intents.append("氛围 → 浪漫")
+
+    # ── 室内/室外 ──
+    if re.search(r'室内|商场|不外|不要户外|别户外|室内活动', text_lower):
+        updated["indoor_outdoor"] = "indoor"
+        intents.append("偏好 → 室内")
+    elif re.search(r'户外|公园|外面|透气|走走|室外|户外活动', text_lower):
+        updated["indoor_outdoor"] = "outdoor"
+        intents.append("偏好 → 户外")
+
+    # ── 强度 ──
+    if re.search(r'轻松|不累|少走路|懒|不折腾|轻松点|不要太累|别太累|太累|不想累', text_lower):
+        updated["activity_intensity"] = "low"
+        updated["low_energy"] = True
+        intents.append("强度 → 轻松")
+    elif re.search(r'刺激|运动|徒步|爬山|体力|要动|动一动', text_lower):
+        updated["activity_intensity"] = "medium"
+        updated["low_energy"] = False
+        intents.append("强度 → 中等")
+
+    # ── 交通方式 ──
+    if re.search(r'自驾|开车|自己开', text_lower):
+        updated["mobility"] = "自驾"
+        updated["transportation"] = "driving"
+        updated["parking_needed"] = True
+        intents.append("交通 → 自驾")
+    elif re.search(r'打车|叫车|网约车|滴滴', text_lower):
+        updated["mobility"] = "打车"
+        updated["transportation"] = "taxi"
+        intents.append("交通 → 打车")
+    elif re.search(r'地铁|公交|坐地铁', text_lower):
+        updated["mobility"] = "公共交通"
+        updated["transportation"] = "transit"
+        updated["near_subway"] = True
+        intents.append("交通 → 公共交通")
+
+    # ── 时间窗口 ──
+    if re.search(r'上午|早上|早一点|早点', text_lower):
+        updated["time_window"] = "morning"
+        intents.append("时间 → 上午")
+    elif re.search(r'下午|午后', text_lower):
+        updated["time_window"] = "afternoon"
+        intents.append("时间 → 下午")
+    elif re.search(r'晚上|傍晚|晚餐|晚饭', text_lower):
+        updated["time_window"] = "evening"
+        intents.append("时间 → 晚上")
+    elif re.search(r'全天|一整天|整天|全天候', text_lower):
+        updated["time_window"] = "full_day"
+        updated["time_slot"] = "full_day"
+        intents.append("时间 → 全天")
+
+    # ── 拍照 ──
+    if re.search(r'拍照|出片|好看|打卡', text_lower):
+        updated["photo_spot"] = True
+        intents.append("偏好 → 拍照出片")
+    elif re.search(r'不用拍照|不拍照|无所谓拍照', text_lower):
+        updated["photo_spot"] = False
+        intents.append("偏好 → 不要求拍照")
+
+    # ── 亲子相关 ──
+    if re.search(r'亲子|带娃|孩子.*岁|宝宝', text_lower):
+        updated["parent_child"] = True
+        child_match = re.search(r'(\d+)\s*岁', text)
+        if child_match:
+            updated["child_age"] = int(child_match.group(1))
+            intents.append(f"孩子年龄 → {updated['child_age']}岁")
+        intents.append("偏好 → 亲子友好")
+
+    # ── 宠物 ──
+    if re.search(r'宠物|带狗|带猫|遛狗|狗狗|猫咪', text_lower):
+        updated["pet_allowed"] = True
+        intents.append("偏好 → 宠物友好")
+
+    mod_type = classify_modification(text)
+
+    return {
+        "updated_slots": updated,
+        "mod_type": mod_type,
+        "parsed_intent": "；".join(intents) if intents else "未识别到具体槽位变更",
+    }
+
+
 # ==================== Orchestrator 主控 ====================
 
 class Orchestrator:
@@ -1401,16 +1592,37 @@ class Orchestrator:
     # ---- 异常处理 ----
 
     def handle_modification(self, modification: str) -> Dict[str, Any]:
-        """用户修改方案，判断回溯目标。"""
+        """用户修改方案，解析意图→更新槽位→判断回溯目标。"""
+        # 1. 解析用户修改意图，提取具体槽位更新
+        parsed = parse_modification_slots(modification, self.session.slots)
+        updated_slots = parsed.get("updated_slots", {})
+
+        # 2. 将解析出的槽位更新应用到 session
+        for key, value in updated_slots.items():
+            self.session.slots[key] = value
+            # 同步更新 locked_constraints，确保后续 agent 搜索使用最新约束
+            if key in ("budget", "budget_level", "people_count", "cuisine_type", "food_preference",
+                       "atmosphere", "indoor_outdoor", "activity_intensity", "low_energy",
+                       "photo_spot", "pet_allowed", "parent_child", "child_age",
+                       "mobility", "transportation", "parking_needed", "near_subway",
+                       "max_travel_time", "travel_radius", "time_window", "time_slot"):
+                self.session.locked_constraints[key] = value
+
+        # 3. 判断回溯目标
         backtrack = handle_backtrack(modification)
         target_state = backtrack["target_state"]
         self.session.current_state = target_state
+
         return {
             "output_type": "backtrack",
             "data": {
                 "action": backtrack["action"],
                 "target_state": target_state.value,
                 "message": backtrack["message"],
+                "updated_slots": updated_slots,
+                "parsed_intent": parsed.get("parsed_intent", ""),
+                "current_slots": self.session.slots,
+                "locked_constraints": self.session.locked_constraints,
             },
         }
 

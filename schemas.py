@@ -198,6 +198,10 @@ class Restaurant:
     is_available: bool = True
     current_capacity: Optional[int] = None
 
+    # 推荐用餐人数范围（用于匹配用户 party size，避免推荐人数严重不匹配的套餐/餐厅）
+    recommended_party_min: Optional[int] = None
+    recommended_party_max: Optional[int] = None
+
 
 @dataclass
 class RouteInfo:

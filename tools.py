@@ -182,7 +182,26 @@ def search_restaurants(
                 best = max(best, 1)  # 模糊匹配
         return best
 
-    scored = []  # (match_score, price_penalty, restaurant)
+    def _party_size_penalty(restaurant: Restaurant, people: int) -> int:
+        """计算用餐人数不匹配惩罚分：人数与餐厅推荐容量差距越大，惩罚越重。"""
+        if people <= 0:
+            return 0
+        r_min = getattr(restaurant, "recommended_party_min", None)
+        r_max = getattr(restaurant, "recommended_party_max", None)
+        if r_min is None and r_max is None:
+            return 0  # 无容量信息，不惩罚
+
+        penalty = 0
+        if r_min is not None and people < r_min:
+            gap = r_min - people
+            penalty = min(gap * 20, 80)  # 每差1人扣20分，封顶80
+        if r_max is not None and people > r_max:
+            gap = people - r_max
+            penalty = min(gap * 15, 60)  # 超出容量扣分稍轻
+
+        return penalty
+
+    scored = []  # (match_score, price_penalty, party_penalty, restaurant)
     for restaurant in default_poi_repository.list_restaurants():
         # 距离筛选
         if restaurant.distance_km > max_distance_km:
@@ -206,17 +225,20 @@ def search_restaurants(
             elif price > high:
                 price_penalty = 30   # 略超预算
 
+        # 人数容量匹配惩罚
+        party_penalty = _party_size_penalty(restaurant, people_count)
+
         # 模拟某些餐厅可能已满
         if random.random() < 0.15:  # 15% 概率已满
             restaurant.is_available = False
 
         match_score = _cuisine_match_score(restaurant)
-        scored.append((match_score, price_penalty, restaurant))
+        scored.append((match_score, price_penalty, party_penalty, restaurant))
 
-    # 排序：菜系匹配分降序（高分在前）→ 预算惩罚升序 → 距离升序
-    scored.sort(key=lambda x: (-x[0], x[1], x[2].distance_km))
+    # 排序：菜系匹配分降序（高分在前）→ 预算惩罚升序 → 人数惩罚升序 → 距离升序
+    scored.sort(key=lambda x: (-x[0], x[1], x[2], x[3].distance_km))
 
-    results = [item[2] for item in scored]
+    results = [item[3] for item in scored]
 
     # 如果有菜系偏好且匹配数极少（≤2），日志提示
     if cuisine_lower:

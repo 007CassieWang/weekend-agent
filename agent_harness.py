@@ -367,6 +367,15 @@ class WeekendActivityAgent:
             request.from_location = user_context.get("home_location")
 
         if not request.people_count:
+            # 优先从 locked_constraints 中获取人数（Round 2 槽位收集结果）
+            locked_people = locked.get("people_count")
+            if locked_people:
+                try:
+                    request.people_count = int(locked_people) if isinstance(locked_people, str) else int(locked_people)
+                    self._log("complete_missing_slots", f"locked_constraints 覆盖 people_count: {request.people_count}")
+                except (ValueError, TypeError):
+                    pass
+        if not request.people_count:
             default_people_count = default_when_missing.get("people_count", defaults.get("people_count"))
             if default_people_count:
                 request.people_count = default_people_count
@@ -2133,7 +2142,10 @@ class WeekendActivityAgent:
         group_type = locked.get("group_type", "")
         child_age = locked.get("child_age")
         budget = locked.get("budget", "")
+        # 人数：优先 locked_constraints → user_request.people_count → 默认 0
         people_count = locked.get("people_count", 0)
+        if not people_count and self.state.user_request:
+            people_count = self.state.user_request.people_count or 0
         context_modifiers = set(locked.get("context_modifiers", []) or [])
         hard_constraints = set(locked.get("hard_constraints", []) or [])
 
@@ -2254,57 +2266,94 @@ class WeekendActivityAgent:
         all_text = name + sf_type + " ".join(sf_attr)
 
         # ---- 团购套餐人数适配 ----
-        person_match = re.search(r"(\d+)人|双人|单人|(\d)大(\d)小|亲子票", name)
+        person_match = re.search(r"(\d+)人|双人|单人|(\d)大(\d)小|亲子票|(\d+)[~-](\d+)人", name)
         coupon_persons = 1  # 默认单人
+        coupon_persons_max = 1
         if person_match:
             matched = person_match.group(0)
             if "双人" in matched:
                 coupon_persons = 2
+                coupon_persons_max = 2
             elif "亲子票" in matched or "大" in matched:
-                coupon_persons = 2  # 1大1小 = 2人
+                coupon_persons = 2
+                coupon_persons_max = 2
             elif "单人" in matched:
                 coupon_persons = 1
+                coupon_persons_max = 1
+            elif "~" in matched or "-" in matched:
+                # 范围格式如 "6-8人"、"3~5人"
+                try:
+                    parts = re.split(r'[~\-]', matched.replace("人", ""))
+                    coupon_persons = int(parts[0])
+                    coupon_persons_max = int(parts[1]) if len(parts) > 1 else coupon_persons
+                except (ValueError, IndexError):
+                    coupon_persons = int(person_match.group(1) or 1)
+                    coupon_persons_max = coupon_persons
             else:
                 try:
                     coupon_persons = int(person_match.group(1))
+                    coupon_persons_max = coupon_persons
                 except (ValueError, IndexError):
                     coupon_persons = 1
+                    coupon_persons_max = 1
         # 约会/浪漫关键词默认双人
         if "约会" in name or "浪漫" in name:
             coupon_persons = max(coupon_persons, 2)
 
+        # ── 基于实际 people_count 的强匹配惩罚 ──
+        # 当用户明确给出了人数，套餐人数与用户人数严重不匹配时大幅扣分
+        actual_people = int(people_count) if people_count and isinstance(people_count, (int, float)) and people_count > 0 else 0
+        if actual_people > 0 and content_type == "coupon":
+            # 套餐人数远大于用户人数（如用户3-4人，套餐6-8人）→ 重罚
+            if coupon_persons_max > actual_people * 1.5:
+                gap_ratio = coupon_persons_max / max(actual_people, 1)
+                score -= min(int(gap_ratio * 25), 70)  # 比例越大扣分越多，封顶70
+            # 套餐人数远小于用户人数（如用户6人，套餐2人）→ 中罚
+            elif actual_people > coupon_persons_max * 2:
+                score -= min(int((actual_people / max(coupon_persons_max, 1)) * 15), 50)
+            # 人数完全匹配 → 加分
+            elif coupon_persons <= actual_people <= coupon_persons_max:
+                score += 25
+
         # 根据同行人类型调整人数期望
         if group_type in ("独自一人",):
             if coupon_persons >= 2:
-                score -= 45  # 独行用户不推荐多人套餐
+                score -= 50  # 独行用户不推荐多人套餐（加重惩罚）
         elif group_type in ("情侣约会",):
             if coupon_persons == 2:
-                score += 18  # 双人套餐正合适
+                score += 20  # 双人套餐正合适
             elif coupon_persons >= 4:
-                score -= 25  # 情侣不需要大份套餐
+                score -= 35  # 情侣不需要大份套餐（加重）
         elif group_type in ("朋友聚会",):
-            if coupon_persons >= 4:
+            if actual_people > 0:
+                if coupon_persons <= actual_people <= coupon_persons_max:
+                    score += 25  # 精确匹配聚会人数
+                elif abs(coupon_persons - actual_people) <= 1:
+                    score += 12  # 接近匹配
+            elif coupon_persons >= 4:
                 score += 22  # 聚会优选大份套餐
             elif coupon_persons == 1 and content_type == "coupon":
-                score -= 10  # 朋友聚餐单人套餐不够
+                score -= 15  # 朋友聚餐单人套餐不够
             # 朋友出行不推情侣/双人套餐
             if "情侣" in all_text or "浪漫" in all_text or "约会" in all_text:
-                score -= 40
+                score -= 45
             elif coupon_persons == 2 and ("双人" in name or "二人" in name):
-                score -= 30
+                score -= 35
         elif group_type in ("家庭出行",):
             # 估算家庭人数：带老人通常3-6人，带娃2-4人
             est_family_size = 3
             if "family_with_elderly" in str(hard_constraints):
                 est_family_size = 4
-            if people_count and isinstance(people_count, (int, float)) and people_count > 0:
-                est_family_size = max(est_family_size, int(people_count))
-            if coupon_persons >= est_family_size:
+            if actual_people > 0:
+                est_family_size = max(est_family_size, actual_people)
+            if coupon_persons <= est_family_size <= coupon_persons_max:
+                score += 28  # 精确匹配家庭人数
+            elif coupon_persons >= est_family_size:
                 score += 22  # 人数匹配的家庭套餐
             elif coupon_persons == 2:
-                score -= 25  # 双人套餐不够家庭吃
+                score -= 30  # 双人套餐不够家庭吃（加重）
             elif coupon_persons == 1:
-                score -= 15
+                score -= 20
 
         # ---- 同行人适配 ----
         if group_type in ("家庭出行",):

@@ -29,6 +29,7 @@ from orchestration import (
     generate_template_cards,
     select_card_and_lock,
     check_skip_possible,
+    parse_modification_slots,
 )
 from receipt import generate_receipt
 
@@ -434,6 +435,17 @@ def _synthesize_from_locked_constraints(locked: Dict[str, Any]) -> str:
     if child_age:
         parts.append(f"孩子{child_age}岁")
 
+    # 人数信息（确保从槽位传递到 agent）
+    people_count = locked.get("people_count")
+    if people_count:
+        pc_labels = {1: "1个人", 2: "2个人", 3: "3个人", 4: "4个人", 5: "5个人", 6: "6个人"}
+        if isinstance(people_count, (int, float)):
+            pc_label = pc_labels.get(int(people_count), f"{int(people_count)}个人")
+            parts.append(pc_label)
+        elif isinstance(people_count, str):
+            # 兼容 "3-5" 这种字符串格式
+            parts.append(f"{people_count}人")
+
     intent_mode = locked.get("intent_mode", "")
     intent_labels = {
         "relax": "轻松不累的", "interact": "互动参与感强的",
@@ -471,6 +483,53 @@ def _synthesize_from_locked_constraints(locked: Dict[str, Any]) -> str:
         parts.append(f"车程不超过{max_travel}分钟")
 
     return "，".join(parts) + "。"
+
+
+class ModifySlotsRequest(BaseModel):
+    """会话中手动输入文本修改槽位的请求"""
+    message: str = Field(default="", min_length=1, max_length=_MAX_MESSAGE_LENGTH)
+    current_slots: Dict[str, Any] = Field(default_factory=dict, description="当前已有的槽位信息")
+    locked_constraints: Optional[Dict[str, Any]] = Field(default=None, description="当前锁定的约束")
+
+    @field_validator("message", mode="after")
+    @classmethod
+    def sanitize_message(cls, v: str) -> str:
+        return _sanitize(v)
+
+
+@app.post("/api/parse-modification")
+def parse_modification(payload: ModifySlotsRequest) -> Dict[str, Any]:
+    """
+    解析用户在会话中的手动文本修改意图，返回结构化的槽位更新。
+
+    前端在用户手动输入修改文字后调用此端点，
+    将返回的 updated_slots 合并到当前槽位后再调用 /api/chat 重新生成方案。
+    """
+    if not payload.message:
+        raise HTTPException(status_code=400, detail="请提供修改内容")
+
+    try:
+        existing = {**(payload.current_slots or {}), **(payload.locked_constraints or {})}
+        result = parse_modification_slots(payload.message, existing)
+
+        # 合并 locked_constraints 中的槽位更新
+        merged_locked = {**(payload.locked_constraints or {})}
+        for key, value in result.get("updated_slots", {}).items():
+            merged_locked[key] = value
+
+        return {
+            "success": True,
+            "output_type": "slot_update",
+            "data": {
+                "updated_slots": result.get("updated_slots", {}),
+                "mod_type": result.get("mod_type", "minor_constraint"),
+                "parsed_intent": result.get("parsed_intent", ""),
+                "merged_locked_constraints": merged_locked,
+                "message": f"已识别到变更：{result.get('parsed_intent', '微调约束')}",
+            },
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/api/receipt")

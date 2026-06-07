@@ -1,7 +1,42 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, MessageCirclePlus, SendHorizontal, Share2, Copy, Check } from "lucide-react";
 
 const APP_NAME = "周末行程助手";
+
+// ── Error Boundary: 防止任何未捕获渲染错误导致白屏 ──
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("[ErrorBoundary] 捕获到渲染错误:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="app-shell">
+          <section className="phone-frame" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+            <h2 style={{ fontSize: 20, marginBottom: 12 }}>⚠️ 出了点问题</h2>
+            <p style={{ color: "var(--muted)", fontSize: 14, textAlign: "center", marginBottom: 20 }}>
+              {this.state.error?.message || "渲染异常，请刷新页面重试"}
+            </p>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+              style={{ padding: "10px 24px", borderRadius: 12, background: "var(--accent)", border: "none", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+            >
+              刷新页面
+            </button>
+          </section>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const GUESS_CARDS = [
   {
@@ -740,8 +775,8 @@ function LoadingCard({ slots, accumulatedSlots, guessCardCtx, pendingResult }) {
 
   // 工具调用状态流：逐行动画展示
   const statusLog = pendingResult?.user_status_log || [];
-  const [visibleLines, setVisibleLines] = React.useState(0);
-  React.useEffect(() => {
+  const [visibleLines, setVisibleLines] = useState(0);
+  useEffect(() => {
     if (statusLog.length === 0) return;
     setVisibleLines(0);
     let i = 0;
@@ -1432,6 +1467,7 @@ export default function App() {
   const [templateCardsLoading, setTemplateCardsLoading] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState(null); // user selected card id
   const [guessCardCtx, setGuessCardCtx] = useState(null); // GUESS_CARD picked for direct flow (skips input box & template cards)
+  const cardSelectTimerRef = useRef(null); // 卡片选择延迟提交的定时器
 
   // 同步 messages 长度到 ref，供 goToStep 快照使用
   useEffect(() => {
@@ -1682,16 +1718,28 @@ export default function App() {
   async function handleCardSelect(cardId) {
     if (loading || !cardId) return;
     setSelectedCardId(cardId);
+    // 清除之前的定时器，防止重复提交
+    if (cardSelectTimerRef.current) clearTimeout(cardSelectTimerRef.current);
     // 给用户短暂视觉反馈后触发方案生成
-    setTimeout(() => submitWithCard(cardId), 300);
+    cardSelectTimerRef.current = setTimeout(() => {
+      cardSelectTimerRef.current = null;
+      submitWithCard(cardId);
+    }, 300);
   }
 
   async function submitWithCard(cardId) {
+    // 防止并发调用：loading 为 true 时忽略后续触发
+    if (loading) return;
     setLoading(true);
     goToStep("result");
     setTemplateCards([]);
     setGuessSentences([]);
     setError("");
+    // 清理 card select 定时器，防止延迟的 submitWithCard 重复触发
+    if (cardSelectTimerRef.current) {
+      clearTimeout(cardSelectTimerRef.current);
+      cardSelectTimerRef.current = null;
+    }
 
     const groupType = (slots.companion_context || [])[0] || "";
     const currentSlots = {
@@ -1708,8 +1756,16 @@ export default function App() {
       ...accumulatedSlots,
     };
 
-    const message = draft.trim();
-    if (message) {
+    const userText = draft.trim();
+    // 当用户选卡片但没打字时，基于已收集的槽位信息生成一条默认消息
+    const message = userText || [
+      currentSlots.group_type,
+      currentSlots.time_slot,
+      currentSlots.mobility,
+    ].filter(Boolean).join("，") || "帮我规划一下";
+    if (userText) {
+      setMessages((prev) => [...prev, { role: "user", content: userText }]);
+    } else {
       setMessages((prev) => [...prev, { role: "user", content: message }]);
     }
     setDraft("");
@@ -1726,7 +1782,7 @@ export default function App() {
             card_id: cardId,
             group_type: groupType,
             current_slots: currentSlots,
-            user_additional_input: message || undefined,
+            user_additional_input: userText || undefined,
           }),
         });
 
@@ -1769,6 +1825,7 @@ export default function App() {
       setLoading(false);
       setPendingResult(null);
       setSelectedCardId(null);
+      setGuessCardCtx(null); // 清理 GUESS_CARD 上下文，防止残留影响后续渲染
     }
   }
 
@@ -1980,6 +2037,7 @@ export default function App() {
   // ---- Render ----
 
   return (
+    <ErrorBoundary>
     <main className="app-shell">
       <section className="phone-frame">
         <StatusBar />
@@ -2069,5 +2127,6 @@ export default function App() {
         onClose={() => setReceiptOverlay(null)}
       />
     </main>
+    </ErrorBoundary>
   );
 }
