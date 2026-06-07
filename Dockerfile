@@ -3,10 +3,11 @@ FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# 复制所有前端文件，删除 macOS 生成的 lockfile 后在同一层安装+构建
-# 强制 npm 在 Linux 上重新解析依赖，确保 @rollup/rollup-linux-x64-gnu 被正确安装
+# 复制所有前端文件，在同一层完成安装+构建
+# --force 标志强制 npm 重新解析并安装所有可选依赖（包括 @rollup/rollup-linux-x64-gnu）
+# 解决 npm 可选依赖跳过导致 Vite build 报 MODULE_NOT_FOUND 的问题
 COPY frontend/ ./
-RUN rm -f package-lock.json node_modules && npm install && npm run build
+RUN npm install --force && npm run build
 
 # ===== Stage 2: Python Runtime =====
 FROM python:3.12-slim
