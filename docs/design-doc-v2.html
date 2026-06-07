@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>闲时活动规划 Agent — 系统设计文档 v2</title>
+<style>
+  :root {
+    --bg:        #FAF9F7;
+    --card:      #FFFFFF;
+    --text:      #2D3436;
+    --text2:     #636E72;
+    --text3:     #8D9496;
+    --border:    #E8E4E0;
+    --border2:   #F0ECE8;
+    --blue:      #5B7F95;
+    --blue-lt:   #D5E8F0;
+    --blue-bg:   #F2F7FA;
+    --teal:      #6B9E8A;
+    --teal-lt:   #D0E6DF;
+    --teal-bg:   #F2F8F5;
+    --amber:     #C4956A;
+    --amber-lt:  #F5E6D3;
+    --amber-bg:  #FDF8F2;
+    --lav:       #8B7FA8;
+    --lav-lt:    #E8DFF0;
+    --lav-bg:    #F8F5FA;
+    --red:       #C07070;
+    --red-lt:    #F5E0E0;
+    --red-bg:    #FDF5F5;
+    --arrow:     #ADB5BD;
+    --shadow:    0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 3px 8px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.04);
+    --radius:    8px;
+    --font:      -apple-system, BlinkMacSystemFont, 'PingFang SC','Microsoft YaHei',sans-serif;
+    --mono:      'SF Mono','Cascadia Code','JetBrains Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;min-width:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  img,svg,table,video,canvas,iframe,pre{max-width:100%}
+
+  /* ─── Banner ─── */
+  .hero{max-width:1060px;margin:32px auto 0;padding:0 28px}
+  .hero h1{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.3px;overflow-wrap:break-word}
+  .hero .sub{font-size:14px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;overflow-wrap:break-word}
+  .hero .sub span{display:flex;align-items:center;gap:4px}
+  .hero .sep{width:1px;height:14px;background:var(--border)}
+
+  /* ─── Page Grid ─── */
+  .page{max-width:1060px;margin:0 auto;padding:20px 28px 48px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+  .full{grid-column:1/-1}
+  @media(max-width:820px){.page{grid-template-columns:minmax(0,1fr)}}
+
+  /* ─── Section ─── */
+  .sec{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:20px 22px;position:relative;overflow:hidden}
+  .sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .sec-hd .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+  .sec-hd h3{font-size:15px;font-weight:700;color:var(--text);overflow-wrap:break-word;flex-shrink:0}
+  .sec-hd .chip{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.2px;white-space:nowrap;flex-shrink:0}
+  .chip-blue{background:var(--blue-bg);color:var(--blue)}
+  .chip-teal{background:var(--teal-bg);color:var(--teal)}
+  .chip-amber{background:var(--amber-bg);color:var(--amber)}
+  .chip-lav{background:var(--lav-bg);color:var(--lav)}
+  .chip-red{background:var(--red-bg);color:var(--red)}
+  .sec p,.sec li{font-size:13px;color:var(--text2);line-height:1.7;overflow-wrap:break-word;word-break:break-word}
+  .sec ul{list-style:none;margin-top:4px}
+  .sec li{padding:3px 0;padding-left:16px;position:relative}
+  .sec li::before{content:'';position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--border)}
+
+  /* ─── SVG Canvas ─── */
+  .svg-wrap{display:flex;justify-content:center;margin:8px 0 4px;overflow:hidden;max-width:100%}
+  .svg-wrap svg{max-width:100%;height:auto}
+
+  /* ─── Stat Bar ─── */
+  .stat-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .stat{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);text-align:center;padding:14px 10px;overflow:hidden}
+  .stat .num{font-size:26px;font-weight:800;color:var(--blue);line-height:1.1;overflow-wrap:break-word}
+  .stat .lbl{font-size:11px;color:var(--text3);margin-top:2px;overflow-wrap:break-word}
+  @media(max-width:600px){.stat-bar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  /* ─── Legended Table ─── */
+  .tbl{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px;table-layout:fixed}
+  .tbl th{text-align:left;color:var(--text3);font-weight:500;font-size:11px;padding:5px 8px;border-bottom:1px solid var(--border2);overflow-wrap:break-word;word-break:break-word}
+  .tbl td{padding:5px 8px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:top;overflow-wrap:break-word;word-break:break-word}
+  .tbl tr:last-child td{border-bottom:none}
+
+  /* ─── Note Callout ─── */
+  .note{font-size:11px;color:var(--text3);background:var(--bg);border-radius:5px;padding:8px 12px;margin-top:8px;border-left:3px solid var(--border);overflow-wrap:break-word;word-break:break-word}
+  .note.amber{border-left-color:var(--amber);background:var(--amber-bg)}
+
+  /* ─── Footer ─── */
+  .foot{grid-column:1/-1;text-align:center;padding:12px;color:var(--text3);font-size:11px;border-top:1px solid var(--border2);overflow-wrap:break-word}
+
+  /* ─── Print ─── */
+  @media print{
+    body{background:#fff}
+    .page{max-width:100%;padding:0 12px;gap:10px}
+    .sec{padding:12px 14px;box-shadow:none;break-inside:avoid;overflow:visible}
+    .stat-bar{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .hero{padding:0 12px;margin:10px auto 0}
+    .hero h1{font-size:20px}
+  }
+
+  /* ─── Tooltip / Popover ─── */
+  .tt{position:relative;cursor:help;border-bottom:1px dotted var(--text3)}
+  .tt:hover .tt-pop{display:block}
+  .tt-pop{display:none;position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:10;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <h1>闲时活动规划 Agent · 系统设计文档</h1>
+  <p class="sub">
+    <span>📐 规划策略</span><span class="sep"></span>
+    <span>⚡ 工具调用链路</span><span class="sep"></span>
+    <span>🛡 异常处理</span><span class="sep"></span>
+    <span>2026-06-07 · v2</span>
+  </p>
+</div>
+
+<!-- ═══ STATS ═══ -->
+<div class="page">
+
+<!-- ═══ SECTION: 设计哲学 · 核心创新 ═══ -->
+<div class="full sec" style="background:linear-gradient(135deg, #F8F5FA 0%, #F2F7FA 50%, #F2F8F5 100%);border-left:4px solid var(--lav)">
+  <div class="sec-hd"><div class="dot" style="background:var(--lav)"></div><h3>设计哲学 · 核心创新</h3><span class="chip chip-lav">产品理念</span></div>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:14px">本产品解决的不是"信息不够"，而是"决策太累"。从"想出去"到真正出门，中间隔着找灵感、比价格、查预约、凑人头，被切分在四个 App 里来回搬运。我们要做的，是把这条链路收进一次对话。</p>
+
+  <!-- 4 Core Innovations -->
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
+    <div style="background:var(--card);border-radius:7px;padding:14px 12px;border-top:3px solid var(--blue);text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">🎯</div>
+      <p style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:4px">猜问，而非读心</p>
+      <p style="font-size:11px;color:var(--text3);line-height:1.6">引导用户说清想要什么。每轮只抛一个可判断的方向，用户只需点头或摇头。</p>
+    </div>
+    <div style="background:var(--card);border-radius:7px;padding:14px 12px;border-top:3px solid var(--teal);text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">🔒</div>
+      <p style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:4px">约束前置，方案渐现</p>
+      <p style="font-size:11px;color:var(--text3);line-height:1.6">先收约束再生成方案。最终方案是用户逐步勾勒的结果——可解释，可回溯。</p>
+    </div>
+    <div style="background:var(--card);border-radius:7px;padding:14px 12px;border-top:3px solid var(--amber);text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">🔬</div>
+      <p style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px">粒度决定精度</p>
+      <p style="font-size:11px;color:var(--text3);line-height:1.6">下钻到子设施级别。标签分属性/热度/行动三层，各司其职。</p>
+    </div>
+    <div style="background:var(--card);border-radius:7px;padding:14px 12px;border-top:3px solid var(--red);text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">🚀</div>
+      <p style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px">推荐即执行的起点</p>
+      <p style="font-size:11px;color:var(--text3);line-height:1.6">有团购则推券，需预约则代订，要凑人则建群。推进到"可成行"。</p>
+    </div>
+  </div>
+
+  <!-- 3 Evolution Direction Summaries -->
+  <p style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">📈 演进方向</p>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+    <div style="background:var(--lav-bg);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px;flex-shrink:0">👥</span>
+      <div><strong style="font-size:11px;color:var(--lav)">单人规划 → 群体决策</strong><br/><span style="font-size:10px;color:var(--text3)">系统接管组织者角色，参与者只需选择</span></div>
+    </div>
+    <div style="background:var(--teal-bg);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px;flex-shrink:0">💬</span>
+      <div><strong style="font-size:11px;color:var(--teal)">行程工具 → 社交入口</strong><br/><span style="font-size:10px;color:var(--text3)">待确认行程即社交货币，规划从决策变为共识</span></div>
+    </div>
+    <div style="background:var(--amber-bg);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px;flex-shrink:0">🧠</span>
+      <div><strong style="font-size:11px;color:var(--amber)">一次成行 → 偏好沉淀</strong><br/><span style="font-size:10px;color:var(--text3)">每次选择补全画像，复用越多规划越快越准</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="full stat-bar">
+  <div class="stat"><div class="num">195+</div><div class="lbl">POI 种子 (活动120 + 餐厅75)</div></div>
+  <div class="stat"><div class="num">34</div><div class="lbl">Multi-Label 动态评分维度</div></div>
+  <div class="stat"><div class="num">10</div><div class="lbl">可识别场景 (Multi-Label)</div></div>
+  <div class="stat"><div class="num">3×</div><div class="lbl">Agentic Feedback 最大重试</div></div>
+</div>
+
+<!-- ═══ SECTION: Architecture ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--blue)"></div><h3>系统架构总览</h3><span class="chip chip-blue">四层分离</span></div>
+  <div class="svg-wrap"><svg viewBox="0 0 960 280" width="960" height="280" role="img" aria-label="System Architecture Diagram">
+    <defs>
+      <marker id="a1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ADB5BD"/></marker>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#D5E8F0"/><stop offset="100%" stop-color="#C5DDE8"/></linearGradient>
+      <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#D0E6DF"/><stop offset="100%" stop-color="#BFDFD6"/></linearGradient>
+      <linearGradient id="g3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#F5E6D3"/><stop offset="100%" stop-color="#F0DDC5"/></linearGradient>
+      <linearGradient id="g4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E8DFF0"/><stop offset="100%" stop-color="#DED4E8"/></linearGradient>
+    </defs>
+    <!-- Layer 1 -->
+    <rect x="40" y="15" width="880" height="52" rx="7" fill="url(#g1)" stroke="#C5DDE8" stroke-width="1.2"/>
+    <text x="60" y="35" font-size="12" font-weight="700" fill="#3A6070">交互层 Presentation</text>
+    <text x="60" y="53" font-size="11" fill="#5A7A88">React 19 + Vite 7 (:5173)  →  Vite Proxy /api  →  FastAPI uvicorn (:8000)</text>
+    <!-- Arrow L1→L2 -->
+    <line x1="200" y1="67" x2="200" y2="80" stroke="var(--arrow)" stroke-width="1.5" marker-end="url(#a1)"/>
+    <text x="210" y="78" font-size="9" fill="var(--arrow)">HTTP /api/* 接口</text>
+    <!-- Layer 2 -->
+    <rect x="40" y="80" width="880" height="52" rx="7" fill="url(#g2)" stroke="#BFDFD6" stroke-width="1.2"/>
+    <text x="60" y="100" font-size="12" font-weight="700" fill="#3A6058">编排层 Orchestration</text>
+    <text x="60" y="118" font-size="11" fill="#5A7A70">orchestration.py（8 状态 FSM + 跳步/回溯）· agent_harness.py（9 步流水线 + 反馈循环）</text>
+    <!-- Arrow L2→L3 -->
+    <line x1="200" y1="132" x2="200" y2="145" stroke="var(--arrow)" stroke-width="1.5" marker-end="url(#a1)"/>
+    <text x="210" y="143" font-size="9" fill="var(--arrow)">Python 调用</text>
+    <!-- Layer 3 -->
+    <rect x="40" y="145" width="880" height="52" rx="7" fill="url(#g3)" stroke="#F0DDC5" stroke-width="1.2"/>
+    <text x="60" y="165" font-size="12" font-weight="700" fill="#6B5040">能力层 Capabilities</text>
+    <text x="60" y="183" font-size="11" fill="#8A7060">prompts.py (NLU Dual)  ·  scoring.py (Multi-Label Weights)  ·  tools.py (Mock APIs: Search/Book/Order/Send)</text>
+    <!-- Arrow L3→L4 -->
+    <line x1="200" y1="197" x2="200" y2="210" stroke="var(--arrow)" stroke-width="1.5" marker-end="url(#a1)"/>
+    <text x="210" y="208" font-size="9" fill="var(--arrow)">PoiAdapter 协议层</text>
+    <!-- Layer 4 -->
+    <rect x="40" y="210" width="880" height="52" rx="7" fill="url(#g4)" stroke="#DED4E8" stroke-width="1.2"/>
+    <text x="60" y="230" font-size="12" font-weight="700" fill="#4A3A5A">数据层 Data</text>
+    <text x="60" y="248" font-size="11" fill="#6A5A7A">config/product_rules.yaml (Single Source of Truth)  ·  data/poi_seed.yaml (195 POIs)  ·  poi_repository.py (Adapter Protocol)</text>
+  </svg></div>
+  <div class="note amber">设计核心：四层之间通过 Protocol 解耦——能力层不感知数据源，编排层不感知 LLM 供应商。product_rules.yaml 是产品规则的唯一真相源。</div>
+</div>
+
+<!-- ═══ SECTION: Planning Strategy (Dual Track) ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--teal)"></div><h3>Planning 策略：双轨并行</h3><span class="chip chip-teal">状态机 + Agentic 循环</span></div>
+
+  <!-- Track 1: State Machine -->
+  <p style="margin-bottom:8px"><strong>轨道一：Orchestration 多轮对话状态机</strong> — 8 状态 × 跳步逻辑 × 回溯机制，逐步收敛用户意图</p>
+  <div class="svg-wrap"><svg viewBox="0 0 900 118" width="900" height="118" role="img" aria-label="State Machine Flow">
+    <defs>
+      <marker id="af" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,6 2,0 4" fill="#6B9E8A"/></marker>
+      <marker id="afg" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,6 2,0 4" fill="#ADB5BD"/></marker>
+    </defs>
+    <!-- Nodes -->
+    <rect x="10" y="22" width="60" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="40" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">初始化</text><text x="40" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">INIT</text>
+    <line x1="70" y1="47" x2="88" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="90" y="22" width="82" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="131" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">槽位收集</text><text x="131" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">SLOT COLLECT</text>
+    <line x1="172" y1="47" x2="190" y2="47" stroke="#ADB5BD" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#afg)"/>
+    <rect x="192" y="22" width="82" height="50" rx="5" fill="#F0ECE8" stroke="#ADB5BD" stroke-width="1.2" stroke-dasharray="5,3"/><text x="233" y="43" text-anchor="middle" font-size="10" font-weight="600" fill="#8D9496">小猜问</text><text x="233" y="58" text-anchor="middle" font-size="8" fill="#ADB5BD">GUESS Q</text>
+    <line x1="274" y1="47" x2="292" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="294" y="22" width="92" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="340" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">泛方案卡片</text><text x="340" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">CARDS (4×3)</text>
+    <line x1="386" y1="47" x2="404" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="406" y="22" width="92" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="452" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">方案搜索</text><text x="452" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">SEARCHING</text>
+    <line x1="498" y1="47" x2="516" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="518" y="22" width="82" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="559" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">方案展示</text><text x="559" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">SHOWN</text>
+    <line x1="600" y1="47" x2="618" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="620" y="22" width="96" height="50" rx="5" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.3"/><text x="668" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#3A6058">小票生成</text><text x="668" y="58" text-anchor="middle" font-size="8" fill="#5A7A70">RECEIPT</text>
+    <line x1="716" y1="47" x2="734" y2="47" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#af)"/>
+    <rect x="736" y="22" width="72" height="50" rx="5" fill="#BFDFD6" stroke="#4A8070" stroke-width="1.5"/><text x="772" y="43" text-anchor="middle" font-size="10" font-weight="700" fill="#2A5040">完成</text><text x="772" y="58" text-anchor="middle" font-size="8" fill="#4A8070">COMPLETED</text>
+
+    <!-- Skip annotations -->
+    <path d="M131 72 L131 88 Q131 94 137 94 L340 94 Q346 94 346 88 L346 78" fill="none" stroke="#ADB5BD" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="238" y="104" text-anchor="middle" font-size="9" fill="var(--text3)">信息充分时，跳过「小猜问」和「泛方案卡片」阶段</text>
+
+    <!-- Backtrack -->
+    <path d="M559 72 L559 86 Q559 90 553 90 L131 90 Q125 90 125 84 L125 78" fill="none" stroke="#C07070" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#afg)"/>
+    <text x="345" y="112" text-anchor="middle" font-size="9" fill="#C07070">回溯：方案展示 → 槽位收集（用户修改约束时触发）</text>
+  </svg></div>
+
+  <!-- ═══ Orchestrator 主控流程 ═══ -->
+  <div style="background:var(--teal-bg);border-radius:7px;padding:14px 18px;margin-top:8px">
+    <p style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px">Orchestrator 主控流程 — Round 0→4 完整调度链路</p>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:11px;color:var(--text2);line-height:1.6">
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 0 · 槽位初始化</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">init_slots()</code><br/>
+        返回 group_type / time_slot / mobility 三个分类选项，启动多轮交互
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 0 Q2 · 小猜问</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_slot_selection()</code><br/>
+        收集用户选择后，调用小猜问引擎，生成 3 句猜测追问
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 1 · 泛方案卡片</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_guess_selection()</code><br/>
+        根据组类型生成 3 张风格卡片，含隐含约束 + 小红书 tag
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 2 · 选择锁定</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_card_selection()</code><br/>
+        用户选卡后合并隐含约束 → locked_constraints，触发 POI 搜索
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 3 · 搜索完成</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_plan_search_complete()</code><br/>
+        展示具体候选方案列表，含时间线 + 评分 + 费用明细
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--teal)">Round 4 · 确认方案</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_plan_confirmation()</code><br/>
+        用户确认后触发 receipt.py 小票生成 + 分享文案
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--red)">异常 · 修改回溯</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">handle_modification()</code><br/>
+        解析槽位更新 → 三级回溯：微调 / 重选卡片 / 重新开始
+      </div>
+      <div style="background:var(--card);border-radius:5px;padding:8px 10px;border:1px solid var(--border2)">
+        <strong style="color:var(--amber)">安全 · 防死循环</strong><br/>
+        <code style="font-size:10px;color:var(--text3)">check_loop_risk()</code><br/>
+        max_rounds=8 · slot_guidance≤3 · 重复检测 · 超时兜底
+      </div>
+    </div>
+  </div>
+
+  <!-- Track 2: Feedback Loop -->
+  <p style="margin-bottom:8px;margin-top:12px"><strong>轨道二：Agentic Feedback Loop</strong> — 渐进式约束放宽，质量门禁 score ≥ 55</p>
+  <div class="svg-wrap"><svg viewBox="0 0 900 68" width="900" height="68" role="img" aria-label="Feedback Loop">
+    <defs>
+      <marker id="afb" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,6 2,0 4" fill="#C4956A"/></marker>
+      <marker id="afbr" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,6 2,0 4" fill="#C07070"/></marker>
+    </defs>
+    <!-- Pipeline -->
+    <rect x="10" y="18" width="100" height="32" rx="5" fill="#F5E6D3" stroke="#C4956A" stroke-width="1.2"/>
+    <text x="60" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5040">① 搜索活动</text>
+    <line x1="110" y1="34" x2="128" y2="34" stroke="#C4956A" stroke-width="1.3" marker-end="url(#afb)"/>
+    <rect x="130" y="18" width="100" height="32" rx="5" fill="#F5E6D3" stroke="#C4956A" stroke-width="1.2"/>
+    <text x="180" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5040">② 搜索餐厅</text>
+    <line x1="230" y1="34" x2="248" y2="34" stroke="#C4956A" stroke-width="1.3" marker-end="url(#afb)"/>
+    <rect x="250" y="18" width="100" height="32" rx="5" fill="#F5E6D3" stroke="#C4956A" stroke-width="1.2"/>
+    <text x="300" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5040">③ 构建方案</text>
+    <line x1="350" y1="34" x2="368" y2="34" stroke="#C4956A" stroke-width="1.3" marker-end="url(#afb)"/>
+    <rect x="370" y="18" width="100" height="32" rx="5" fill="#F5E6D3" stroke="#C4956A" stroke-width="1.2"/>
+    <text x="420" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="#6B5040">④ 评分排序</text>
+    <line x1="470" y1="34" x2="488" y2="34" stroke="#C4956A" stroke-width="1.3" marker-end="url(#afb)"/>
+    <rect x="490" y="10" width="120" height="48" rx="6" fill="#FDF8F2" stroke="#C4956A" stroke-width="1.5"/>
+    <text x="550" y="29" text-anchor="middle" font-size="10" font-weight="700" fill="#6B5040">⑤ 质量门禁</text>
+    <text x="550" y="46" text-anchor="middle" font-size="9" fill="#8A7060">score ≥ 55 ?</text>
+
+    <!-- Feedback path -->
+    <path d="M550 58 L550 62 Q550 66 546 66 L60 66 Q54 66 54 62 L54 56" fill="none" stroke="#C07070" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#afbr)"/>
+    <text x="300" y="66" text-anchor="middle" font-size="9" fill="#C07070">❌ 不达标：放宽约束 · 车程 ×1.5 → 丢弃过滤 → ×2.5（最多 3 次重试）</text>
+  </svg></div>
+</div>
+
+<!-- ═══ SECTION: Scoring Engine ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--amber)"></div><h3>评分引擎：Multi-Label 动态权重合成</h3><span class="chip chip-amber">配置驱动</span></div>
+  <div class="svg-wrap"><svg viewBox="0 0 900 250" width="900" height="250" role="img" aria-label="Scoring Engine">
+    <!-- Base Weights -->
+    <rect x="20" y="10" width="180" height="175" rx="7" fill="#FDF8F2" stroke="#E8D5BE" stroke-width="1.2"/>
+    <text x="110" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6B5040">基础权重（8 维度）</text>
+    <line x1="30" y1="38" x2="190" y2="38" stroke="#E8D5BE" stroke-width=".8"/>
+    <text x="38" y="56" font-size="10" fill="#8A7060">时间匹配 16</text>
+    <text x="38" y="72" font-size="10" fill="#8A7060">距离匹配 16</text>
+    <text x="38" y="88" font-size="10" fill="#8A7060">偏好匹配 14</text>
+    <text x="38" y="104" font-size="10" fill="#8A7060">预算匹配 12</text>
+    <text x="38" y="120" font-size="10" fill="#8A7060">路线顺畅 10</text>
+    <text x="38" y="136" font-size="10" fill="#8A7060">可用性风险 14</text>
+    <text x="38" y="152" font-size="10" fill="#8A7060">地点质量 10 · 群体适配 8</text>
+
+    <!-- Plus sign -->
+    <text x="218" y="102" text-anchor="middle" font-size="20" font-weight="700" fill="#C4956A">+</text>
+
+    <!-- Label Adjustments -->
+    <rect x="240" y="10" width="380" height="195" rx="7" fill="#F8F5FA" stroke="#DED4E8" stroke-width="1.2"/>
+    <text x="430" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#4A3A5A">标签调整（4 轴 × N 标签）</text>
+    <line x1="250" y1="38" x2="610" y2="38" stroke="#DED4E8" stroke-width=".8"/>
+    <text x="260" y="58" font-size="10" fill="#6A5A7A">同行人上下文（7 标签）：solo / couple / family_with_children /</text>
+    <text x="260" y="74" font-size="10" fill="#6A5A7A">  family_with_elderly / friends / colleagues / pet</text>
+    <text x="260" y="94" font-size="10" fill="#6A5A7A">主要意图（12 标签）：meal / cafe_tea / culture_experience /</text>
+    <text x="260" y="110" font-size="10" fill="#6A5A7A">  indoor_entertainment / outdoor_walk / …</text>
+    <text x="260" y="130" font-size="10" fill="#6A5A7A">上下文修饰（16 标签）：rainy_day / hot_weather / low_budget /</text>
+    <text x="260" y="146" font-size="10" fill="#6A5A7A">  high_budget / low_energy / quiet / photo_spot / …</text>
+    <text x="260" y="166" font-size="10" fill="#6A5A7A">硬约束（8 标签）：child_safety / elder_mobility /</text>
+    <text x="260" y="182" font-size="10" fill="#6A5A7A">  pet_allowed / allergy_safe / max_distance / …</text>
+    <text x="260" y="200" font-size="9" fill="#8A7A9A">示例：family_with_children → child_friendly+24 · pet → pet_friendly+30</text>
+
+    <!-- Arrow to Result -->
+    <text x="640" y="108" text-anchor="middle" font-size="20" font-weight="700" fill="#8B7FA8">→</text>
+
+    <!-- Result -->
+    <rect x="660" y="45" width="200" height="110" rx="8" fill="#E8DFF0" stroke="#8B7FA8" stroke-width="1.5"/>
+    <text x="760" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#4A3A5A">34 合成维度</text>
+    <text x="760" y="92" text-anchor="middle" font-size="10" fill="#6A5A7A">归一化 → 100 分制</text>
+    <text x="760" y="112" text-anchor="middle" font-size="9" fill="#8A7A9A">child_friendly(28)</text>
+    <text x="760" y="128" text-anchor="middle" font-size="9" fill="#8A7A9A">pet_friendly(30)</text>
+    <text x="760" y="144" text-anchor="middle" font-size="9" fill="#8A7A9A">food_match(18) …</text>
+  </svg></div>
+  <div class="note amber">所有 label_adjustments 定义在 product_rules.yaml §scoring_strategy 中，产品经理直接改 YAML 调权，无需动 scoring.py。</div>
+</div>
+
+<!-- ═══ SECTION: Tool Call Chain ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--teal)"></div><h3>工具调用链路：完整 6 阶段流水线</h3><span class="chip chip-teal">端到端</span></div>
+  <div class="svg-wrap"><svg viewBox="0 0 960 330" width="960" height="330" role="img" aria-label="Tool Call Pipeline">
+    <defs>
+      <marker id="ap" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,6 2,0 4" fill="#6B9E8A"/></marker>
+    </defs>
+    <!-- Phase 1 -->
+    <rect x="15" y="8" width="140" height="100" rx="6" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.2"/>
+    <text x="85" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#3A6058">Phase 1 · NLU 解析</text>
+    <line x1="25" y1="34" x2="145" y2="34" stroke="#A0C8BB" stroke-width=".6"/>
+    <text x="25" y="50" font-size="9" fill="#5A7A70">parse_request_llm()</text>
+    <text x="25" y="64" font-size="9" fill="#5A7A70">  → DeepSeek API (优先)</text>
+    <text x="25" y="78" font-size="9" fill="#5A7A70">parse_request_mock()</text>
+    <text x="25" y="92" font-size="9" fill="#5A7A70">  → 正则规则（兜底）</text>
+
+    <line x1="155" y1="58" x2="180" y2="58" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#ap)"/>
+
+    <!-- Phase 2 -->
+    <rect x="182" y="8" width="140" height="100" rx="6" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.2"/>
+    <text x="252" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#3A6058">Phase 2 · 槽位补全</text>
+    <line x1="192" y1="34" x2="312" y2="34" stroke="#A0C8BB" stroke-width=".6"/>
+    <text x="192" y="50" font-size="9" fill="#5A7A70">complete_missing_slots()</text>
+    <text x="192" y="64" font-size="9" fill="#5A7A70">locked_constraints 优先</text>
+    <text x="192" y="78" font-size="9" fill="#5A7A70">_resolve_time_slot() 推断</text>
+    <text x="192" y="92" font-size="9" fill="#5A7A70">product_rules.defaults 兜底</text>
+
+    <line x1="322" y1="58" x2="347" y2="58" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#ap)"/>
+
+    <!-- Phase 3+4 -->
+    <rect x="349" y="8" width="140" height="100" rx="6" fill="#D0E6DF" stroke="#6B9E8A" stroke-width="1.2"/>
+    <text x="419" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#3A6058">Phase 3+4 · 搜索</text>
+    <line x1="359" y1="34" x2="469" y2="34" stroke="#A0C8BB" stroke-width=".6"/>
+    <text x="359" y="50" font-size="9" fill="#5A7A70">search_activities()</text>
+    <text x="359" y="64" font-size="9" fill="#5A7A70">search_restaurants()</text>
+    <text x="359" y="78" font-size="9" fill="#5A7A70">→ poi_repository.search()</text>
+    <text x="359" y="92" font-size="9" fill="#5A7A70">→ 按场景排序 + 过滤</text>
+
+    <line x1="489" y1="58" x2="514" y2="58" stroke="#6B9E8A" stroke-width="1.3" marker-end="url(#ap)"/>
+
+    <!-- Phase 5 -->
+    <rect x="516" y="8" width="140" height="100" rx="6" fill="#F5E6D3" stroke="#C4956A" stroke-width="1.2"/>
+    <text x="586" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#6B5040">Phase 5 · 构建+评分</text>
+    <line x1="526" y1="34" x2="646" y2="34" stroke="#D4C0A8" stroke-width=".6"/>
+    <text x="526" y="50" font-size="9" fill="#8A7060">build_candidate_plans()</text>
+    <text x="526" y="64" font-size="9" fill="#8A7060">全天 vs 普通 双模式</text>
+    <text x="526" y="78" font-size="9" fill="#8A7060">GUESS_CARD 保证项注入</text>
+    <text x="526" y="92" font-size="9" fill="#8A7060">score_plans() → 动态权重</text>
+
+    <line x1="656" y1="58" x2="681" y2="58" stroke="#C4956A" stroke-width="1.3" marker-end="url(#ap)"/>
+
+    <!-- Phase 6 -->
+    <rect x="683" y="8" width="140" height="100" rx="6" fill="#E8DFF0" stroke="#8B7FA8" stroke-width="1.2"/>
+    <text x="753" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#4A3A5A">Phase 6 · 执行</text>
+    <line x1="693" y1="34" x2="813" y2="34" stroke="#C8BED8" stroke-width=".6"/>
+    <text x="693" y="50" font-size="9" fill="#6A5A7A">book_activity() × N</text>
+    <text x="693" y="64" font-size="9" fill="#6A5A7A">book_restaurant()</text>
+    <text x="693" y="78" font-size="9" fill="#6A5A7A">order_item(cake/flower)</text>
+    <text x="693" y="92" font-size="9" fill="#6A5A7A">send_plan(recipient)</text>
+
+    <!-- Bottom row: key details -->
+    <rect x="30" y="120" width="860" height="95" rx="5" fill="#FAF9F7" stroke="#E8E4E0" stroke-width="1"/>
+    <text x="50" y="142" font-size="12" font-weight="700" fill="#2D3436">关键设计细节</text>
+    <!-- Left column -->
+    <text x="50" y="164" font-size="10" fill="#636E72">🔗 菜系关键词提取：food_preference → raw_text → context_modifiers 三级来源，CUISINE_KEYWORD_MAP 统一映射</text>
+    <text x="50" y="182" font-size="10" fill="#636E72">📍 供给排序：多信号融合 (场景偏好白名单+modifier实时信号+hard_constraint强限制)，GUESS_CARD 地点强力优先(+80)</text>
+    <text x="50" y="200" font-size="10" fill="#636E72">🗺 全天方案约束：上午/下午不同地点/类型，午餐/晚餐不同餐厅/菜系，轮询去重确保 Top 5 活动多样性</text>
+  </svg></div>
+
+  <!-- Supply Sorting detail -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+    <div style="background:var(--amber-bg);border-radius:6px;padding:10px 14px">
+      <p style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:4px">推荐引擎：POI 子项智能穿插</p>
+      <p style="font-size:11px;color:var(--text2)">活动 POI：sub_facilities · seasonal_events · coupons · nearby_dining 四类收集 → 多维度打分 → round-robin 交错排列。餐厅 POI：团购套餐 +500 base 强优先 → 人数精确匹配 +25 / 严重不匹配 -70。输出 ≤5 项带 badge 推荐。</p>
+    </div>
+    <div style="background:var(--lav-bg);border-radius:6px;padding:10px 14px">
+      <p style="font-size:12px;font-weight:700;color:var(--lav);margin-bottom:4px">Draft / Commit 分离</p>
+      <p style="font-size:11px;color:var(--text2)">plan_only: 生成方案 → 确认 → confirm_and_execute 独立提交。full: 一站式生成+执行。ID 校验防注入，planning_trace 完整记录评分推理链。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: Exception Handling ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--red)"></div><h3>异常处理机制：纵深防御六层</h3><span class="chip chip-red">纵深防御</span></div>
+  <div class="svg-wrap"><svg viewBox="0 0 960 290" width="960" height="290" role="img" aria-label="Exception Handling Layers">
+    <!-- Layer 1 -->
+    <rect x="30" y="10" width="900" height="40" rx="5" fill="#F5E0E0" stroke="#C07070" stroke-width="1.2"/>
+    <text x="50" y="29" font-size="11" font-weight="700" fill="#8B4040">第 1 层</text>
+    <text x="120" y="29" font-size="11" fill="#A06060">Agentic 反馈循环：搜索/构建/评分不达标 → 渐进放宽约束重试（最多 3 次）</text>
+    <text x="780" y="29" font-size="10" fill="#C07070">最大车程 ×1.5 → 丢弃过滤 → ×2.5</text>
+
+    <!-- Layer 2 -->
+    <rect x="30" y="54" width="900" height="40" rx="5" fill="#FDF5F5" stroke="#D0A0A0" stroke-width="1.2"/>
+    <text x="50" y="73" font-size="11" font-weight="700" fill="#A05050">第 2 层</text>
+    <text x="120" y="73" font-size="11" fill="#B07070">供给兜底：POI 搜索不足 → fallback POI 注入 · GUESS_CARD 缺失 → 合成 Activity/Restaurant · 预约失败 → 自动切换备选</text>
+
+    <!-- Layer 3 -->
+    <rect x="30" y="98" width="900" height="40" rx="5" fill="#F5E0E0" stroke="#C07070" stroke-width="1.2"/>
+    <text x="50" y="117" font-size="11" font-weight="700" fill="#8B4040">第 3 层</text>
+    <text x="120" y="117" font-size="11" fill="#A06060">状态机防死循环：最大轮次=8 · 槽位引导≤3 · 重复问题检测 · 用户无响应检测</text>
+
+    <!-- Layer 4 -->
+    <rect x="30" y="142" width="900" height="40" rx="5" fill="#FDF5F5" stroke="#D0A0A0" stroke-width="1.2"/>
+    <text x="50" y="161" font-size="11" font-weight="700" fill="#A05050">第 4 层</text>
+    <text x="120" y="161" font-size="11" fill="#B07070">解析器容错：LLM → Mock 双保险 fallback · confidence &lt; 0.55 标记警告但不阻塞 · Enum 转换 ValueError 捕获</text>
+
+    <!-- Layer 5 -->
+    <rect x="30" y="186" width="900" height="40" rx="5" fill="#F5E0E0" stroke="#C07070" stroke-width="1.2"/>
+    <text x="50" y="205" font-size="11" font-weight="700" fill="#8B4040">第 5 层</text>
+    <text x="120" y="205" font-size="11" fill="#A06060">执行层 Failover：单项预约失败不阻塞 · 餐厅预约失败自动切备选 · all_succeeded 聚合判断</text>
+
+    <!-- Layer 6 -->
+    <rect x="30" y="230" width="900" height="40" rx="5" fill="#FDF5F5" stroke="#D0A0A0" stroke-width="1.2"/>
+    <text x="50" y="249" font-size="11" font-weight="700" fill="#A05050">第 6 层</text>
+    <text x="120" y="249" font-size="11" fill="#B07070">约束修改回溯：parse_modification_slots() → 三级回溯 (微调·re_search / 方向变更·back_to_templates / 大变更·restart)</text>
+  </svg></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+    <div>
+      <p style="font-size:12px;font-weight:700;color:#2D3436;margin-bottom:4px">约束放宽策略（按 retry count 递增）</p>
+      <table class="tbl">
+        <tr><th>重试</th><th>策略</th><th>效果</th></tr>
+        <tr><td>0</td><td>默认搜索参数</td><td>最大车程 30 分钟，亲子/饮食过滤 开</td></tr>
+        <tr><td>1</td><td>扩大搜索半径</td><td>最大车程 → 45 分钟</td></tr>
+        <tr><td>2</td><td>丢弃过滤条件</td><td>亲子过滤 关，饮食过滤 关</td></tr>
+        <tr><td>3</td><td>大幅放宽</td><td>最大车程 → 75 分钟，取当前最优 &lt;55 分方案</td></tr>
+      </table>
+    </div>
+    <div>
+      <p style="font-size:12px;font-weight:700;color:#2D3436;margin-bottom:4px">产品级异常兜底 (product_rules.yaml)</p>
+      <table class="tbl">
+        <tr><th>异常类型</th><th>兜底策略</th></tr>
+        <tr><td>unavailable</td><td>同区域·同预算·同类型可预约备选项</td></tr>
+        <tr><td>route_too_far</td><td>缩小半径至 30min，优先近距离商圈</td></tr>
+        <tr><td>over_budget</td><td>替换同类型人均更低选项</td></tr>
+        <tr><td>poor_weather</td><td>替换为室内活动或商场综合体</td></tr>
+        <tr><td>ultimate</td><td>近距离商场综合体 (餐饮+休闲+购物)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: Design Philosophy ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--lav)"></div><h3>设计哲学</h3><span class="chip chip-lav">核心原则</span></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    <div style="text-align:center;padding:12px 8px;background:var(--blue-bg);border-radius:6px">
+      <div style="font-size:22px;margin-bottom:4px">📋</div>
+      <p style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:2px">配置即产品</p>
+      <p style="font-size:11px;color:var(--text3)">product_rules.yaml 唯一真相源。PM 改 YAML 调参，不动代码。</p>
+    </div>
+    <div style="text-align:center;padding:12px 8px;background:var(--teal-bg);border-radius:6px">
+      <div style="font-size:22px;margin-bottom:4px">🎯</div>
+      <p style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:2px">场景先于画像</p>
+      <p style="font-size:11px;color:var(--text3)">不预设家庭结构。先识别再启用约束，儿童/减脂等均为可选标签。</p>
+    </div>
+    <div style="text-align:center;padding:12px 8px;background:var(--amber-bg);border-radius:6px">
+      <div style="font-size:22px;margin-bottom:4px">🤝</div>
+      <p style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:2px">承诺必兑现</p>
+      <p style="font-size:11px;color:var(--text3)">GUESS_CARD 地点保证 + 合成注入 + 评分加成，所见即所得。</p>
+    </div>
+    <div style="text-align:center;padding:12px 8px;background:var(--lav-bg);border-radius:6px">
+      <div style="font-size:22px;margin-bottom:4px">🔌</div>
+      <p style="font-size:12px;font-weight:700;color:var(--lav);margin-bottom:2px">Mock 优先·真插可拔</p>
+      <p style="font-size:11px;color:var(--text3)">PoiAdapter Protocol 抽象，高德/美团可选接入，不污染核心层。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: Key Metrics ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--blue)"></div><h3>关键指标与可观测性</h3><span class="chip chip-blue">可观测性</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <table class="tbl">
+        <tr><th style="width:40%">模块</th><th>核心文件</th><th style="width:30%">关键行数</th></tr>
+        <tr><td>编排状态机</td><td>orchestration.py</td><td>~1630</td></tr>
+        <tr><td>Agent 主流程</td><td>agent_harness.py</td><td>~2600</td></tr>
+        <tr><td>产品规则</td><td>product_rules.yaml</td><td>~1080</td></tr>
+        <tr><td>POI 数据</td><td>poi_seed.yaml</td><td>195 POI</td></tr>
+      </table>
+    </div>
+    <div>
+      <table class="tbl">
+        <tr><th>可观测性指标</th><th>来源</th></tr>
+        <tr><td>request_id</td><td>每次 run() 自动生成 UUID-12</td></tr>
+        <tr><td>retry_count / relaxed_constraints</td><td>AgentState 实时追踪</td></tr>
+        <tr><td>planning_trace</td><td>评分推理链 + Runner-up gap</td></tr>
+        <tr><td>total_tokens / total_cost</td><td>LLM 调用累计 (prompts.py)</td></tr>
+        <tr><td>结构化日志</td><td>JSON 格式 · step / msg / details</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: 完整设计哲学 ═══ -->
+<div class="full sec">
+  <div class="sec-hd"><div class="dot" style="background:var(--lav)"></div><h3>附录：设计哲学与演进方向（全文）</h3><span class="chip chip-lav">完整版本</span></div>
+
+  <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.8">本产品解决的不是"信息不够"，而是"决策太累"。从"想出去"到真正出门，中间隔着找灵感、比价格、查预约、凑人头，被切分在四个 App 里来回搬运。我们要做的，是把这条链路收进一次对话。</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+    <!-- Column 1: Core Innovation -->
+    <div>
+      <p style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--lav-lt)">一、核心创新</p>
+
+      <div style="margin-bottom:10px">
+        <p style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:3px">猜问，而非读心</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">不预测用户想要什么，而是引导用户说清想要什么。每轮只抛一个可判断的方向——室内还是户外、带娃还是约会——用户只需点头或摇头。既避免了意图推断必然的猜错重来，也让不擅表达的用户在三轮内收敛出明确诉求。</p>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <p style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:3px">约束前置，方案渐现</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">不先出方案再让用户筛选，而是先收约束再生成方案。人群、预算、档期、天气，每轮问答都在压缩候选空间。最终方案不是系统的一次性猜测，而是用户逐步勾勒的结果——可解释，可回溯。</p>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <p style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:3px">粒度决定精度</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">推荐的上限取决于知识库的颗粒度。我们不以"一座商场"为推荐单元，而是下钻到有独立定价、独立时长、独立人群的子设施。标签据此分三层：属性管筛选，热度管排序，行动管执行，各司其职。</p>
+      </div>
+
+      <div style="margin-bottom:0">
+        <p style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:3px">推荐即执行的起点</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">给出方案不是终点。行动标签直接驱动下一步：有团购则推券，需预约则代订，要凑人则建群。确认方案后，流程被推进到"可成行"，而非停在一份待办清单。</p>
+      </div>
+    </div>
+
+    <!-- Column 2: Evolution Directions -->
+    <div>
+      <p style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--lav-lt)">二、演进方向</p>
+
+      <div style="margin-bottom:14px;padding:12px;background:var(--lav-bg);border-radius:6px;border-left:3px solid var(--lav)">
+        <p style="font-size:12px;font-weight:700;color:var(--lav);margin-bottom:4px">👥 从单人规划到群体决策</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">单人跑通猜问闭环后，多人协同是顺理成章的延伸。"周末聚一下"的痛点不在没有去处，而在无人愿当组织者。猜问在群聊中同样成立：一人发起、系统抛案、各自表态、求公约数。组织者的角色被系统接管，参与者只需选择。</p>
+      </div>
+
+      <div style="margin-bottom:14px;padding:12px;background:var(--teal-bg);border-radius:6px;border-left:3px solid var(--teal)">
+        <p style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:4px">💬 从行程工具到社交入口</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">一份待确认的行程，本身就是轻量的社交货币。发起、投票、确认、同步下单——规划从个人决策变为群体共识。产品的位置，也从"查去哪"前移到"帮组局"。</p>
+      </div>
+
+      <div style="margin-bottom:0;padding:12px;background:var(--amber-bg);border-radius:6px;border-left:3px solid var(--amber)">
+        <p style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:4px">🧠 从一次成行到偏好沉淀</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.7">每次选择都在补全个人与群体的口味画像。同一群人再次相约时，系统不必从零开始：成员偏好、历史选择、档期约束已经在位，方案更快、更准、更省沟通。规划的边际成本，随使用递减。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Footer ─── -->
+<div class="full foot">闲时活动规划 Agent · 设计文档 v2 · 2026-06-07 · 配置驱动的 Agentic 规划系统 · 学术海报风格</div>
+</div>
+
+</body>
+</html>
