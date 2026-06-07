@@ -219,7 +219,7 @@ button {
 .empty-state h1 {
   margin: 26px 0 10px;
   color: var(--ink);
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.18;
   font-weight: 780;
   letter-spacing: 0;

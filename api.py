@@ -54,6 +54,11 @@ FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
+# 服务设计文档静态文件
+DOCS_DIR = Path(__file__).parent / "docs"
+if DOCS_DIR.exists():
+    app.mount("/docs", StaticFiles(directory=DOCS_DIR, html=True), name="docs")
+
 # CORS: 从环境变量读取额外的允许来源（逗号分隔），生产环境同源部署时不需要
 _cors_origins = [
     "http://localhost:5173",
