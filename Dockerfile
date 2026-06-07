@@ -3,11 +3,10 @@ FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# 复制所有前端文件，在同一层完成安装+构建
-# --force 标志强制 npm 重新解析并安装所有可选依赖（包括 @rollup/rollup-linux-x64-gnu）
-# 解决 npm 可选依赖跳过导致 Vite build 报 MODULE_NOT_FOUND 的问题
+# 复制前端源码并构建（package-lock.json 已通过 .dockerignore 排除，
+# npm 将在 Linux 上重新生成 lockfile，确保原生模块正确安装）
 COPY frontend/ ./
-RUN npm install --force && npm run build
+RUN npm install && npm run build
 
 # ===== Stage 2: Python Runtime =====
 FROM python:3.12-slim
