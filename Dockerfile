@@ -3,10 +3,10 @@ FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# 一次性复制所有前端文件，在同一层完成安装+构建
-# 避免 Docker 层缓存导致 npm 可选依赖 bug (npm/cli#4828)
+# 复制所有前端文件，删除 macOS 生成的 lockfile 后在同一层安装+构建
+# 强制 npm 在 Linux 上重新解析依赖，确保 @rollup/rollup-linux-x64-gnu 被正确安装
 COPY frontend/ ./
-RUN npm install && npm run build
+RUN rm -f package-lock.json node_modules && npm install && npm run build
 
 # ===== Stage 2: Python Runtime =====
 FROM python:3.12-slim
