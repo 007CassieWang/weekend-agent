@@ -376,7 +376,6 @@ class AgentState:
     def add_user_status(self, message: str):
         """添加一条用户可见的状态消息"""
         self.user_status_log.append(message)
-        self.current_step = step
 
     def record_llm_usage(self, model: str, prompt_tokens: int, completion_tokens: int):
         """记录 LLM 调用用量和估算成本"""
