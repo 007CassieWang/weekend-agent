@@ -3,13 +3,10 @@ FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# 安装依赖（不复制 package-lock.json，避免 npm ci 的可选依赖 bug）
-COPY frontend/package.json ./
-RUN npm install
-
-# 复制前端源码并构建
+# 一次性复制所有前端文件，在同一层完成安装+构建
+# 避免 Docker 层缓存导致 npm 可选依赖 bug (npm/cli#4828)
 COPY frontend/ ./
-RUN npm run build
+RUN npm install && npm run build
 
 # ===== Stage 2: Python Runtime =====
 FROM python:3.12-slim
